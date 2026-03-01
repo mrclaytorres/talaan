@@ -1,0 +1,135 @@
+/* Carbon Dashboard — Global Theme Variables */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+	margin: 0;
+	padding: 0;
+}
+
+:root {
+	--font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+	--font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+	--radius: 8px;
+	--radius-sm: 6px;
+	--radius-lg: 10px;
+	--transition: 150ms ease;
+}
+
+/* ─── Dark Theme (default) ─── */
+[data-theme='dark'] {
+	--bg-page: #09090b;
+	--bg-surface: #18181b;
+	--bg-elevated: #27272a;
+	--bg-hover: #303035;
+	--border: #3f3f46;
+	--border-subtle: #27272a;
+	--text-primary: #fafafa;
+	--text-secondary: #a1a1aa;
+	--text-muted: #71717a;
+	--accent: #14b8a6;
+	--accent-soft: rgba(20, 184, 166, 0.1);
+	--accent-hover: #0d9488;
+	--accent-text: #2dd4bf;
+	--color-primary: #14b8a6;
+	--color-primary-dark: #0d9488;
+	--color-primary-bg: rgba(20, 184, 166, 0.1);
+	--positive: #34d399;
+	--positive-bg: rgba(52, 211, 153, 0.08);
+	--positive-text: #34d399;
+	--negative: #f87171;
+	--negative-bg: rgba(248, 113, 113, 0.08);
+	--negative-text: #f87171;
+	--warning: #fbbf24;
+	--warning-bg: rgba(251, 191, 36, 0.08);
+	--info: #60a5fa;
+	--info-bg: rgba(96, 165, 250, 0.08);
+	--shadow-sm: none;
+	--shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+
+	/* Legacy variable mappings for existing components */
+	--color-text: #fafafa;
+	--color-text-muted: #71717a;
+	--color-bg: #18181b;
+	--color-bg-page: #09090b;
+	--color-bg-muted: #27272a;
+	--color-border: #3f3f46;
+	--color-hover: #303035;
+	--color-secondary: #27272a;
+	--color-secondary-dark: #3f3f46;
+	--color-danger: #ef4444;
+	--color-danger-dark: #dc2626;
+	--color-disabled-bg: #27272a;
+	--color-primary-ring: rgba(20, 184, 166, 0.2);
+}
+
+/* ─── Light Theme ─── */
+[data-theme='light'] {
+	--bg-page: #fafafa;
+	--bg-surface: #ffffff;
+	--bg-elevated: #f4f4f5;
+	--bg-hover: #ececee;
+	--border: #e4e4e7;
+	--border-subtle: #f4f4f5;
+	--text-primary: #18181b;
+	--text-secondary: #52525b;
+	--text-muted: #a1a1aa;
+	--accent: #0d9488;
+	--accent-soft: rgba(13, 148, 136, 0.06);
+	--accent-hover: #0f766e;
+	--accent-text: #0d9488;
+	--color-primary: #0d9488;
+	--color-primary-dark: #0f766e;
+	--color-primary-bg: rgba(13, 148, 136, 0.06);
+	--positive: #059669;
+	--positive-bg: rgba(5, 150, 105, 0.06);
+	--positive-text: #059669;
+	--negative: #dc2626;
+	--negative-bg: rgba(220, 38, 38, 0.05);
+	--negative-text: #dc2626;
+	--warning: #d97706;
+	--warning-bg: rgba(217, 119, 6, 0.06);
+	--info: #2563eb;
+	--info-bg: rgba(37, 99, 235, 0.06);
+	--shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+	--shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+
+	/* Legacy variable mappings for existing components */
+	--color-text: #18181b;
+	--color-text-muted: #71717a;
+	--color-bg: #ffffff;
+	--color-bg-page: #fafafa;
+	--color-bg-muted: #f4f4f5;
+	--color-border: #e4e4e7;
+	--color-hover: #ececee;
+	--color-secondary: #e4e4e7;
+	--color-secondary-dark: #d4d4d8;
+	--color-danger: #dc2626;
+	--color-danger-dark: #b91c1c;
+	--color-disabled-bg: #f4f4f5;
+	--color-primary-ring: rgba(13, 148, 136, 0.15);
+}
+
+body {
+	font-family: var(--font-sans);
+	background-color: var(--bg-page);
+	color: var(--text-primary);
+	line-height: 1.5;
+	transition:
+		background-color var(--transition),
+		color var(--transition);
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+a {
+	color: var(--accent-text);
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}

@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Design 2: Zen Minimal</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --font-sans: 'Inter', -apple-system, sans-serif;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --radius-pill: 9999px;
+    --transition: 200ms ease;
+    --max-w: 680px;
+  }
+  [data-theme="light"]{
+    --bg-page: #f5f5f7;
+    --bg-card: #ffffff;
+    --bg-hover: #f0f0f2;
+    --bg-input: #f5f5f7;
+    --border: #e8e8ed;
+    --text-primary: #1d1d1f;
+    --text-secondary: #6e6e73;
+    --text-muted: #aeaeb2;
+    --accent: #6366f1;
+    --accent-soft: rgba(99,102,241,0.08);
+    --accent-hover: #4f46e5;
+    --positive: #22c55e;
+    --positive-bg: rgba(34,197,94,0.08);
+    --positive-text: #16a34a;
+    --negative: #ef4444;
+    --negative-bg: rgba(239,68,68,0.06);
+    --negative-text: #dc2626;
+    --warning: #f59e0b;
+    --warning-bg: rgba(245,158,11,0.08);
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,0.08);
+  }
+  [data-theme="dark"]{
+    --bg-page: #000000;
+    --bg-card: #1c1c1e;
+    --bg-hover: #2c2c2e;
+    --bg-input: #2c2c2e;
+    --border: #38383a;
+    --text-primary: #f5f5f7;
+    --text-secondary: #98989d;
+    --text-muted: #636366;
+    --accent: #818cf8;
+    --accent-soft: rgba(129,140,248,0.12);
+    --accent-hover: #6366f1;
+    --positive: #4ade80;
+    --positive-bg: rgba(74,222,128,0.1);
+    --positive-text: #4ade80;
+    --negative: #f87171;
+    --negative-bg: rgba(248,113,113,0.1);
+    --negative-text: #f87171;
+    --warning: #fbbf24;
+    --warning-bg: rgba(251,191,36,0.1);
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.3);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,0.4);
+  }
+  body{font-family:var(--font-sans);background:var(--bg-page);color:var(--text-primary);line-height:1.5;transition:background var(--transition),color var(--transition);padding-bottom:80px}
+
+  /* HEADER */
+  .header{max-width:var(--max-w);margin:0 auto;padding:20px 20px 0;display:flex;align-items:center;justify-content:space-between}
+  .header-left{display:flex;align-items:center;gap:12px}
+  .app-title{font-size:20px;font-weight:700;letter-spacing:-0.02em}
+  .header-right{display:flex;align-items:center;gap:8px}
+  .icon-btn{width:36px;height:36px;border-radius:var(--radius-sm);border:none;background:var(--bg-card);color:var(--text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-sm);transition:all var(--transition);font-size:16px}
+  .icon-btn:hover{background:var(--bg-hover);color:var(--text-primary)}
+
+  /* ACCOUNT PILL */
+  .account-pill{display:flex;align-items:center;gap:6px;background:var(--bg-card);border-radius:var(--radius-pill);padding:6px 14px 6px 10px;box-shadow:var(--shadow-sm);font-size:13px;font-weight:500;color:var(--text-secondary);cursor:pointer;border:none;transition:all var(--transition)}
+  .account-pill:hover{background:var(--bg-hover)}
+  .account-dot{width:8px;height:8px;border-radius:50%;background:var(--accent)}
+
+  /* CONTAINER */
+  .container{max-width:var(--max-w);margin:0 auto;padding:16px 20px}
+
+  /* SUMMARY CARD */
+  .summary-card{background:var(--bg-card);border-radius:var(--radius);padding:20px 24px;box-shadow:var(--shadow-md);margin-bottom:16px;text-align:center}
+  .summary-label{font-size:13px;color:var(--text-muted);font-weight:500;margin-bottom:4px}
+  .summary-value{font-size:32px;font-weight:700;letter-spacing:-0.03em;line-height:1.2}
+  .summary-sub{font-size:14px;font-weight:500;margin-top:2px}
+  .summary-detail{font-size:12px;color:var(--text-muted);margin-top:6px}
+  .text-positive{color:var(--positive-text)}
+  .text-negative{color:var(--negative-text)}
+
+  /* STATS ROW */
+  .stats-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px}
+  .stat-card{background:var(--bg-card);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow-sm);text-align:center}
+  .stat-card .stat-val{font-size:20px;font-weight:700;letter-spacing:-0.02em}
+  .stat-card .stat-lbl{font-size:11px;color:var(--text-muted);font-weight:500;margin-top:2px;text-transform:uppercase;letter-spacing:0.04em}
+
+  /* SECTION */
+  .section-head{display:flex;align-items:center;justify-content:space-between;margin:20px 0 10px}
+  .section-title{font-size:15px;font-weight:600}
+
+  /* TRADE CARD */
+  .trade-card{background:var(--bg-card);border-radius:var(--radius);padding:14px 18px;box-shadow:var(--shadow-sm);margin-bottom:8px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:all var(--transition)}
+  .trade-card:hover{box-shadow:var(--shadow-md);transform:translateY(-1px)}
+  .trade-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0}
+  .trade-icon.long{background:var(--positive-bg);color:var(--positive-text)}
+  .trade-icon.short{background:var(--negative-bg);color:var(--negative-text)}
+  .trade-info{flex:1;min-width:0}
+  .trade-top{display:flex;align-items:center;gap:8px}
+  .trade-ticker{font-weight:600;font-size:15px}
+  .trade-dir{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em}
+  .trade-dir.long{color:var(--positive-text)}
+  .trade-dir.short{color:var(--negative-text)}
+  .trade-bottom{display:flex;align-items:center;gap:12px;margin-top:3px;font-size:12px;color:var(--text-muted)}
+  .trade-right{text-align:right;flex-shrink:0}
+  .trade-pnl{font-weight:700;font-size:15px}
+  .trade-rr{font-size:11px;color:var(--text-muted);margin-top:2px}
+
+  /* RR PILL */
+  .rr-pill{display:inline-flex;padding:2px 8px;border-radius:var(--radius-pill);font-size:11px;font-weight:600}
+  .rr-good{background:var(--positive-bg);color:var(--positive-text)}
+  .rr-ok{background:var(--warning-bg);color:var(--warning)}
+
+  /* ADD CARD */
+  .add-card{background:transparent;border:2px dashed var(--border);border-radius:var(--radius);padding:16px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;font-size:14px;font-weight:500;color:var(--text-muted);transition:all var(--transition);margin-bottom:8px}
+  .add-card:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+
+  /* BOTTOM NAV */
+  .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--bg-card);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-around;padding:6px 0;padding-bottom:max(6px,env(safe-area-inset-bottom));z-index:100;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+  [data-theme="light"] .bottom-nav{background:rgba(255,255,255,0.85)}
+  [data-theme="dark"] .bottom-nav{background:rgba(28,28,30,0.85)}
+  .nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;padding:4px 16px;border-radius:var(--radius-sm);transition:all var(--transition);cursor:pointer}
+  .nav-item svg{width:22px;height:22px;color:var(--text-muted);transition:color var(--transition)}
+  .nav-item span{font-size:10px;font-weight:500;color:var(--text-muted);transition:color var(--transition)}
+  .nav-item.active svg{color:var(--accent)}
+  .nav-item.active span{color:var(--accent)}
+  .nav-item:hover svg,.nav-item:hover span{color:var(--text-secondary)}
+
+  /* CALENDAR */
+  .calendar-card{background:var(--bg-card);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow-md);margin-bottom:16px}
+  .cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+  .cal-title{font-size:17px;font-weight:600;letter-spacing:-0.01em}
+  .cal-nav{display:flex;gap:6px}
+  .cal-nav-btn{width:32px;height:32px;border-radius:var(--radius-sm);border:none;background:var(--bg-input);color:var(--text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all var(--transition);font-size:14px}
+  .cal-nav-btn:hover{background:var(--bg-hover);color:var(--text-primary)}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+  .cal-weekday{text-align:center;font-size:11px;font-weight:500;color:var(--text-muted);padding:4px 0 8px}
+  .cal-day{min-height:60px;border-radius:var(--radius-sm);padding:6px;display:flex;flex-direction:column;transition:all var(--transition);cursor:pointer}
+  .cal-day:hover{background:var(--bg-hover)}
+  .cal-day .cal-num{font-size:12px;font-weight:500;color:var(--text-secondary);margin-bottom:auto}
+  .cal-day .cal-pnl{font-size:11px;font-weight:600;line-height:1.3}
+  .cal-day .cal-pct{font-size:10px;opacity:0.7}
+  .cal-day.pos{background:var(--positive-bg);border-radius:var(--radius-sm)}.cal-day.pos .cal-pnl{color:var(--positive-text)}
+  .cal-day.neg{background:var(--negative-bg);border-radius:var(--radius-sm)}.cal-day.neg .cal-pnl{color:var(--negative-text)}
+  .cal-day.dim{opacity:0.25}
+  .cal-summary{display:flex;align-items:center;justify-content:space-between;margin-top:16px;padding-top:16px;border-top:1px solid var(--border)}
+  .cal-summary-lbl{font-size:14px;font-weight:500;color:var(--text-secondary)}
+  .cal-summary-val{font-size:16px;font-weight:700}
+
+  /* DESIGN LABEL */
+  .design-label{position:fixed;top:16px;right:16px;background:var(--accent);color:#fff;padding:8px 16px;border-radius:var(--radius-sm);font-size:12px;font-weight:600;z-index:1000;box-shadow:0 4px 12px rgba(99,102,241,0.3)}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <span class="app-title">Trading Journal</span>
+  </div>
+  <div class="header-right">
+    <button class="account-pill">
+      <span class="account-dot"></span>
+      All Accounts
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m6 9 6 6 6-6"/></svg>
+    </button>
+    <button class="icon-btn" onclick="toggleTheme()" id="themeBtn">&#9728;</button>
+    <button class="icon-btn">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+    </button>
+  </div>
+</div>
+
+<div class="container">
+  <!-- SUMMARY -->
+  <div class="summary-card">
+    <div class="summary-label">Today's P&L</div>
+    <div class="summary-value text-positive">+$1,247.50</div>
+    <div class="summary-sub text-positive">+2.4%</div>
+    <div class="summary-detail">2 trades closed</div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-val">3</div>
+      <div class="stat-lbl">Open</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val text-positive">68%</div>
+      <div class="stat-lbl">Win Rate</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val text-positive">+$3.9K</div>
+      <div class="stat-lbl">This Week</div>
+    </div>
+  </div>
+
+  <!-- OPEN TRADES -->
+  <div class="section-head">
+    <span class="section-title">Open Positions</span>
+  </div>
+
+  <div class="trade-card">
+    <div class="trade-icon long">&#8593;</div>
+    <div class="trade-info">
+      <div class="trade-top">
+        <span class="trade-ticker">AAPL</span>
+        <span class="trade-dir long">Long</span>
+        <span class="rr-pill rr-good">1:2.3</span>
+      </div>
+      <div class="trade-bottom">
+        <span>Entry $182.50</span>
+        <span>SL $178.00</span>
+        <span>TP $193.00</span>
+      </div>
+    </div>
+    <div class="trade-right">
+      <div class="trade-pnl" style="color:var(--text-muted)">&mdash;</div>
+      <div class="trade-rr">Feb 28</div>
+    </div>
+  </div>
+
+  <div class="trade-card">
+    <div class="trade-icon short">&#8595;</div>
+    <div class="trade-info">
+      <div class="trade-top">
+        <span class="trade-ticker">TSLA</span>
+        <span class="trade-dir short">Short</span>
+        <span class="rr-pill rr-good">1:2.0</span>
+      </div>
+      <div class="trade-bottom">
+        <span>Entry $245.00</span>
+        <span>SL $252.00</span>
+        <span>TP $231.00</span>
+      </div>
+    </div>
+    <div class="trade-right">
+      <div class="trade-pnl" style="color:var(--text-muted)">&mdash;</div>
+      <div class="trade-rr">Feb 28</div>
+    </div>
+  </div>
+
+  <div class="trade-card">
+    <div class="trade-icon long">&#8593;</div>
+    <div class="trade-info">
+      <div class="trade-top">
+        <span class="trade-ticker">MSFT</span>
+        <span class="trade-dir long">Long</span>
+        <span class="rr-pill rr-good">1:3.0</span>
+      </div>
+      <div class="trade-bottom">
+        <span>Entry $415.20</span>
+        <span>SL $408.00</span>
+        <span>TP $437.00</span>
+      </div>
+    </div>
+    <div class="trade-right">
+      <div class="trade-pnl" style="color:var(--text-muted)">&mdash;</div>
+      <div class="trade-rr">Feb 28</div>
+    </div>
+  </div>
+
+  <!-- ADD -->
+  <div class="add-card">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14m-7-7h14"/></svg>
+    Add New Trade
+  </div>
+
+  <!-- CLOSED -->
+  <div class="section-head">
+    <span class="section-title">Closed Today</span>
+    <span class="text-positive" style="font-size:14px;font-weight:600">+$1,247.50</span>
+  </div>
+
+  <div class="trade-card">
+    <div class="trade-icon long">&#8593;</div>
+    <div class="trade-info">
+      <div class="trade-top">
+        <span class="trade-ticker">NVDA</span>
+        <span class="trade-dir long">Long</span>
+      </div>
+      <div class="trade-bottom">
+        <span>$890.00 &rarr; $895.80</span>
+      </div>
+    </div>
+    <div class="trade-right">
+      <div class="trade-pnl text-positive">+$523.00</div>
+      <div class="trade-rr">+1.1%</div>
+    </div>
+  </div>
+
+  <div class="trade-card">
+    <div class="trade-icon short">&#8595;</div>
+    <div class="trade-info">
+      <div class="trade-top">
+        <span class="trade-ticker">META</span>
+        <span class="trade-dir short">Short</span>
+      </div>
+      <div class="trade-bottom">
+        <span>$520.30 &rarr; $513.05</span>
+      </div>
+    </div>
+    <div class="trade-right">
+      <div class="trade-pnl text-positive">+$724.50</div>
+      <div class="trade-rr">+1.3%</div>
+    </div>
+  </div>
+
+  <!-- CALENDAR -->
+  <div class="section-head">
+    <span class="section-title">Calendar</span>
+  </div>
+
+  <div class="calendar-card">
+    <div class="cal-header">
+      <button class="cal-nav-btn">&larr;</button>
+      <span class="cal-title">February 2026</span>
+      <button class="cal-nav-btn">&rarr;</button>
+    </div>
+    <div class="cal-grid">
+      <div class="cal-weekday">Mon</div><div class="cal-weekday">Tue</div><div class="cal-weekday">Wed</div><div class="cal-weekday">Thu</div><div class="cal-weekday">Fri</div><div class="cal-weekday">Sat</div><div class="cal-weekday">Sun</div>
+      <div class="cal-day dim"><span class="cal-num">26</span></div>
+      <div class="cal-day dim"><span class="cal-num">27</span></div>
+      <div class="cal-day dim"><span class="cal-num">28</span></div>
+      <div class="cal-day dim"><span class="cal-num">29</span></div>
+      <div class="cal-day dim"><span class="cal-num">30</span></div>
+      <div class="cal-day dim"><span class="cal-num">31</span></div>
+      <div class="cal-day"><span class="cal-num">1</span></div>
+      <div class="cal-day pos"><span class="cal-num">2</span><span class="cal-pnl">+$320</span></div>
+      <div class="cal-day neg"><span class="cal-num">3</span><span class="cal-pnl">-$180</span></div>
+      <div class="cal-day pos"><span class="cal-num">4</span><span class="cal-pnl">+$540</span></div>
+      <div class="cal-day pos"><span class="cal-num">5</span><span class="cal-pnl">+$290</span></div>
+      <div class="cal-day neg"><span class="cal-num">6</span><span class="cal-pnl">-$410</span></div>
+      <div class="cal-day"><span class="cal-num">7</span></div>
+      <div class="cal-day"><span class="cal-num">8</span></div>
+      <div class="cal-day pos"><span class="cal-num">9</span><span class="cal-pnl">+$670</span></div>
+      <div class="cal-day pos"><span class="cal-num">10</span><span class="cal-pnl">+$125</span></div>
+      <div class="cal-day neg"><span class="cal-num">11</span><span class="cal-pnl">-$340</span></div>
+      <div class="cal-day pos"><span class="cal-num">12</span><span class="cal-pnl">+$890</span></div>
+      <div class="cal-day pos"><span class="cal-num">13</span><span class="cal-pnl">+$210</span></div>
+      <div class="cal-day"><span class="cal-num">14</span></div>
+      <div class="cal-day"><span class="cal-num">15</span></div>
+      <div class="cal-day neg"><span class="cal-num">16</span><span class="cal-pnl">-$150</span></div>
+      <div class="cal-day pos"><span class="cal-num">17</span><span class="cal-pnl">+$480</span></div>
+      <div class="cal-day pos"><span class="cal-num">18</span><span class="cal-pnl">+$320</span></div>
+      <div class="cal-day neg"><span class="cal-num">19</span><span class="cal-pnl">-$560</span></div>
+      <div class="cal-day pos"><span class="cal-num">20</span><span class="cal-pnl">+$740</span></div>
+      <div class="cal-day"><span class="cal-num">21</span></div>
+      <div class="cal-day"><span class="cal-num">22</span></div>
+      <div class="cal-day pos"><span class="cal-num">23</span><span class="cal-pnl">+$510</span></div>
+      <div class="cal-day neg"><span class="cal-num">24</span><span class="cal-pnl">-$280</span></div>
+      <div class="cal-day pos"><span class="cal-num">25</span><span class="cal-pnl">+$620</span></div>
+      <div class="cal-day pos"><span class="cal-num">26</span><span class="cal-pnl">+$340</span></div>
+      <div class="cal-day pos"><span class="cal-num">27</span><span class="cal-pnl">+$724</span></div>
+      <div class="cal-day pos"><span class="cal-num">28</span><span class="cal-pnl">+$523</span></div>
+      <div class="cal-day dim"><span class="cal-num">1</span></div>
+    </div>
+    <div class="cal-summary">
+      <span class="cal-summary-lbl">This Month</span>
+      <span class="cal-summary-val text-positive">+$5,382.00</span>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <a class="nav-item active" href="#">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m7 16 4-8 4 4 4-8"/></svg>
+    <span>Trades</span>
+  </a>
+  <a class="nav-item" href="#">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18"/><path d="M8 2v4"/><path d="M16 2v4"/></svg>
+    <span>Calendar</span>
+  </a>
+  <a class="nav-item" href="#">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 17a5 5 0 0 1 10 0"/><path d="M12 17a5 5 0 0 1 10 0"/><circle cx="7" cy="7" r="4"/><circle cx="17" cy="7" r="4"/></svg>
+    <span>Accounts</span>
+  </a>
+</nav>
+
+<div class="design-label">Design 2: Zen Minimal</div>
+
+<script>
+function toggleTheme(){
+  const html=document.documentElement;
+  const btn=document.getElementById('themeBtn');
+  if(html.dataset.theme==='light'){html.dataset.theme='dark';btn.innerHTML='&#9790;'}
+  else{html.dataset.theme='light';btn.innerHTML='&#9728;'}
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Design 1: Terminal Pro</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --font-sans: 'Inter', -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    --radius: 6px;
+    --radius-lg: 10px;
+    --transition: 150ms ease;
+  }
+  [data-theme="dark"]{
+    --bg-primary: #0f1117;
+    --bg-surface: #1a1d27;
+    --bg-elevated: #242832;
+    --bg-hover: #2a2e3a;
+    --border: #2d3140;
+    --border-subtle: #232630;
+    --text-primary: #e4e5e9;
+    --text-secondary: #a0a4b0;
+    --text-muted: #7a7f8e;
+    --accent: #10b981;
+    --accent-dim: rgba(16,185,129,0.12);
+    --accent-hover: #059669;
+    --positive: #10b981;
+    --positive-bg: rgba(16,185,129,0.1);
+    --positive-text: #34d399;
+    --negative: #ef4444;
+    --negative-bg: rgba(239,68,68,0.1);
+    --negative-text: #f87171;
+    --warning: #f59e0b;
+    --warning-bg: rgba(245,158,11,0.1);
+    --sidebar-bg: #13151c;
+    --nav-active: rgba(16,185,129,0.08);
+    --shadow: 0 1px 3px rgba(0,0,0,0.4);
+  }
+  [data-theme="light"]{
+    --bg-primary: #f3f4f8;
+    --bg-surface: #ffffff;
+    --bg-elevated: #f8f9fb;
+    --bg-hover: #f0f1f5;
+    --border: #e2e4ea;
+    --border-subtle: #ecedf2;
+    --text-primary: #111827;
+    --text-secondary: #4b5563;
+    --text-muted: #9ca3af;
+    --accent: #059669;
+    --accent-dim: rgba(5,150,105,0.08);
+    --accent-hover: #047857;
+    --positive: #059669;
+    --positive-bg: rgba(5,150,105,0.06);
+    --positive-text: #047857;
+    --negative: #dc2626;
+    --negative-bg: rgba(220,38,38,0.06);
+    --negative-text: #b91c1c;
+    --warning: #d97706;
+    --warning-bg: rgba(217,119,6,0.06);
+    --sidebar-bg: #ffffff;
+    --nav-active: rgba(5,150,105,0.06);
+    --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  body{font-family:var(--font-sans);background:var(--bg-primary);color:var(--text-primary);line-height:1.5;transition:background var(--transition),color var(--transition)}
+
+  /* RAIL SIDEBAR */
+  .sidebar{position:fixed;left:0;top:0;bottom:0;width:52px;background:var(--sidebar-bg);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:12px 0;z-index:100;transition:width 200ms ease}
+  .sidebar:hover{width:180px}
+  .sidebar .logo{width:32px;height:32px;border-radius:var(--radius);background:var(--accent);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;margin-bottom:24px;flex-shrink:0}
+  .sidebar nav{display:flex;flex-direction:column;gap:4px;width:100%;padding:0 8px}
+  .sidebar .nav-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--radius);color:var(--text-muted);cursor:pointer;text-decoration:none;transition:all var(--transition);white-space:nowrap;overflow:hidden;font-size:13px;font-weight:500}
+  .sidebar .nav-item:hover{background:var(--bg-hover);color:var(--text-primary)}
+  .sidebar .nav-item.active{background:var(--nav-active);color:var(--accent)}
+  .sidebar .nav-item svg{width:18px;height:18px;flex-shrink:0}
+  .sidebar .nav-item span{opacity:0;transition:opacity 150ms ease}
+  .sidebar:hover .nav-item span{opacity:1}
+  .sidebar .spacer{flex:1}
+  .sidebar .theme-toggle{width:32px;height:32px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg-surface);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-muted);transition:all var(--transition);font-size:16px}
+  .sidebar .theme-toggle:hover{color:var(--text-primary);border-color:var(--text-muted)}
+
+  /* MAIN CONTENT */
+  .main{margin-left:52px;min-height:100vh;transition:margin-left 200ms ease}
+
+  /* TOP BAR */
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:48px;border-bottom:1px solid var(--border);background:var(--bg-surface)}
+  .topbar .tabs{display:flex;gap:0}
+  .topbar .tab{padding:12px 16px;font-size:13px;font-weight:500;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;transition:all var(--transition)}
+  .topbar .tab:hover{color:var(--text-secondary)}
+  .topbar .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+  .topbar .right{display:flex;align-items:center;gap:12px}
+  .account-select{background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius);padding:4px 10px;color:var(--text-secondary);font-size:12px;font-family:var(--font-sans);cursor:pointer}
+
+  /* CONTENT */
+  .content{padding:20px 24px}
+
+  /* SECTION */
+  .section{margin-bottom:20px}
+  .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .section-title{font-size:13px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em}
+
+  /* STAT STRIP */
+  .stat-strip{display:flex;gap:1px;background:var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:20px}
+  .stat-item{flex:1;background:var(--bg-surface);padding:12px 16px}
+  .stat-item .stat-label{font-size:11px;font-weight:500;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px}
+  .stat-item .stat-value{font-family:var(--font-mono);font-size:18px;font-weight:600}
+  .stat-item .stat-sub{font-family:var(--font-mono);font-size:11px;margin-top:2px}
+  .stat-positive .stat-value,.stat-positive .stat-sub{color:var(--positive-text)}
+  .stat-negative .stat-value,.stat-negative .stat-sub{color:var(--negative-text)}
+
+  /* TABLE */
+  .table-card{background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden}
+  table{width:100%;border-collapse:collapse}
+  thead th{text-align:left;padding:8px 12px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid var(--border);background:var(--bg-elevated);position:sticky;top:0}
+  tbody tr{border-bottom:1px solid var(--border-subtle);transition:background var(--transition)}
+  tbody tr:last-child{border-bottom:none}
+  tbody tr:hover{background:var(--bg-hover)}
+  tbody td{padding:8px 12px;font-size:13px}
+  .mono{font-family:var(--font-mono);font-size:12px}
+  .text-positive{color:var(--positive-text)}
+  .text-negative{color:var(--negative-text)}
+  .text-muted{color:var(--text-muted)}
+  .text-warning{color:var(--warning)}
+
+  /* BADGES */
+  .badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.03em}
+  .badge-long{background:var(--positive-bg);color:var(--positive-text)}
+  .badge-short{background:var(--negative-bg);color:var(--negative-text)}
+  .badge-open{background:var(--warning-bg);color:var(--warning)}
+  .badge-closed{background:var(--accent-dim);color:var(--accent)}
+
+  /* STATUS DOT */
+  .dot{width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:6px}
+  .dot-open{background:var(--warning)}
+  .dot-closed{background:var(--accent)}
+
+  /* RR BADGE */
+  .rr{font-family:var(--font-mono);font-size:11px;font-weight:600;padding:2px 6px;border-radius:4px}
+  .rr-good{background:var(--positive-bg);color:var(--positive-text)}
+  .rr-ok{background:var(--warning-bg);color:var(--warning)}
+  .rr-bad{background:var(--negative-bg);color:var(--negative-text)}
+
+  /* BUTTON */
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:var(--radius);font-size:12px;font-weight:600;border:none;cursor:pointer;transition:all var(--transition);font-family:var(--font-sans)}
+  .btn-primary{background:var(--accent);color:#fff}
+  .btn-primary:hover{background:var(--accent-hover)}
+  .btn-secondary{background:var(--bg-elevated);color:var(--text-secondary);border:1px solid var(--border)}
+  .btn-secondary:hover{background:var(--bg-hover);color:var(--text-primary)}
+
+  /* CALENDAR */
+  .calendar{background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px}
+  .cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .cal-title{font-size:14px;font-weight:600}
+  .cal-nav{display:flex;gap:4px}
+  .cal-nav button{width:28px;height:28px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg-elevated);color:var(--text-muted);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr) auto;gap:2px}
+  .cal-weekday{text-align:center;font-size:10px;font-weight:600;color:var(--text-muted);padding:4px;text-transform:uppercase;letter-spacing:0.05em}
+  .cal-day{min-height:56px;border-radius:4px;padding:4px 6px;display:flex;flex-direction:column;border:1px solid transparent;transition:all var(--transition)}
+  .cal-day:hover{border-color:var(--border)}
+  .cal-day .cal-num{font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:auto}
+  .cal-day .cal-pnl{font-family:var(--font-mono);font-size:10px;font-weight:600;line-height:1.3}
+  .cal-day .cal-pct{font-family:var(--font-mono);font-size:9px;opacity:0.7}
+  .cal-day.pos{background:var(--positive-bg)}.cal-day.pos .cal-pnl{color:var(--positive-text)}
+  .cal-day.neg{background:var(--negative-bg)}.cal-day.neg .cal-pnl{color:var(--negative-text)}
+  .cal-day.dim{opacity:0.3}
+  .cal-week-total{min-height:56px;border-radius:4px;padding:4px 6px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg-elevated);border:1px solid var(--border-subtle);min-width:52px}
+  .cal-week-total .cal-pnl{font-family:var(--font-mono);font-size:10px;font-weight:700;line-height:1.3}
+  .cal-week-total .cal-pct{font-family:var(--font-mono);font-size:9px;opacity:0.7}
+  .cal-week-total.pos .cal-pnl,.cal-week-total.pos .cal-pct{color:var(--positive-text)}
+  .cal-week-total.neg .cal-pnl,.cal-week-total.neg .cal-pct{color:var(--negative-text)}
+  .cal-summary{display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);font-size:13px}
+  .cal-summary-label{color:var(--text-muted);font-weight:500}
+  .cal-summary-val{font-family:var(--font-mono);font-weight:700}
+
+  /* DESIGN LABEL */
+  .design-label{position:fixed;bottom:16px;right:16px;background:var(--accent);color:#fff;padding:8px 16px;border-radius:var(--radius);font-size:12px;font-weight:600;z-index:1000;box-shadow:0 4px 12px rgba(16,185,129,0.3)}
+
+  @media(max-width:640px){
+    .sidebar{display:none}
+    .main{margin-left:0}
+    .stat-strip{flex-direction:column}
+    .mobile-nav{display:flex!important}
+  }
+  .mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;height:52px;background:var(--bg-surface);border-top:1px solid var(--border);align-items:center;justify-content:space-around;z-index:100}
+  .mobile-nav a{color:var(--text-muted);font-size:10px;text-align:center;text-decoration:none;display:flex;flex-direction:column;align-items:center;gap:2px}
+  .mobile-nav a.active{color:var(--accent)}
+  .mobile-nav a svg{width:20px;height:20px}
+</style>
+</head>
+<body>
+
+<!-- RAIL SIDEBAR -->
+<aside class="sidebar">
+  <div class="logo">TJ</div>
+  <nav>
+    <a class="nav-item active" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m7 16 4-8 4 4 4-8"/></svg>
+      <span>Trades</span>
+    </a>
+    <a class="nav-item" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18"/><path d="M8 2v4"/><path d="M16 2v4"/></svg>
+      <span>Calendar</span>
+    </a>
+    <a class="nav-item" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 17a5 5 0 0 1 10 0"/><path d="M12 17a5 5 0 0 1 10 0"/><circle cx="7" cy="7" r="4"/><circle cx="17" cy="7" r="4"/></svg>
+      <span>Accounts</span>
+    </a>
+    <a class="nav-item" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+      <span>Settings</span>
+    </a>
+  </nav>
+  <div class="spacer"></div>
+  <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">&#9790;</button>
+</aside>
+
+<div class="main">
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="tabs">
+      <div class="tab active">Open Positions</div>
+      <div class="tab">Closed Today</div>
+      <div class="tab">All Trades</div>
+    </div>
+    <div class="right">
+      <select class="account-select">
+        <option>All Accounts</option>
+        <option>Main Account (USD)</option>
+        <option>Crypto (BTC)</option>
+      </select>
+      <button class="btn btn-primary">+ New Trade</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- STAT STRIP -->
+    <div class="stat-strip">
+      <div class="stat-item stat-positive">
+        <div class="stat-label">Today's P&L</div>
+        <div class="stat-value">+$1,247.50</div>
+        <div class="stat-sub">+2.4%</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">Open Trades</div>
+        <div class="stat-value">3</div>
+        <div class="stat-sub" style="color:var(--text-muted)">$12.4K exposure</div>
+      </div>
+      <div class="stat-item stat-positive">
+        <div class="stat-label">Week P&L</div>
+        <div class="stat-value">+$3,892.00</div>
+        <div class="stat-sub">+7.6%</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">Win Rate</div>
+        <div class="stat-value">68%</div>
+        <div class="stat-sub" style="color:var(--text-muted)">Last 30 days</div>
+      </div>
+    </div>
+
+    <!-- TRADES TABLE -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">Open Positions</span>
+      </div>
+      <div class="table-card">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Ticker</th>
+              <th>Direction</th>
+              <th>Entry</th>
+              <th>Stop Loss</th>
+              <th>Take Profit</th>
+              <th>R:R</th>
+              <th>Status</th>
+              <th>P&L</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="mono text-muted">Feb 28</td>
+              <td style="font-weight:600">AAPL</td>
+              <td><span class="badge badge-long">Long</span></td>
+              <td class="mono">$182.50</td>
+              <td class="mono">$178.00</td>
+              <td class="mono">$193.00</td>
+              <td><span class="rr rr-good">1:2.3</span></td>
+              <td><span class="dot dot-open"></span>Open</td>
+              <td class="mono text-muted">&mdash;</td>
+            </tr>
+            <tr>
+              <td class="mono text-muted">Feb 28</td>
+              <td style="font-weight:600">TSLA</td>
+              <td><span class="badge badge-short">Short</span></td>
+              <td class="mono">$245.00</td>
+              <td class="mono">$252.00</td>
+              <td class="mono">$231.00</td>
+              <td><span class="rr rr-good">1:2.0</span></td>
+              <td><span class="dot dot-open"></span>Open</td>
+              <td class="mono text-muted">&mdash;</td>
+            </tr>
+            <tr>
+              <td class="mono text-muted">Feb 28</td>
+              <td style="font-weight:600">MSFT</td>
+              <td><span class="badge badge-long">Long</span></td>
+              <td class="mono">$415.20</td>
+              <td class="mono">$408.00</td>
+              <td class="mono">$437.00</td>
+              <td><span class="rr rr-good">1:3.0</span></td>
+              <td><span class="dot dot-open"></span>Open</td>
+              <td class="mono text-muted">&mdash;</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- CLOSED -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">Closed Today</span>
+        <span class="mono text-positive" style="font-size:13px;font-weight:600">+$1,247.50</span>
+      </div>
+      <div class="table-card">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Ticker</th>
+              <th>Direction</th>
+              <th>Entry</th>
+              <th>Exit</th>
+              <th>R:R</th>
+              <th>Status</th>
+              <th>P&L</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="mono text-muted">Feb 28</td>
+              <td style="font-weight:600">NVDA</td>
+              <td><span class="badge badge-long">Long</span></td>
+              <td class="mono">$890.00</td>
+              <td class="mono">$895.80</td>
+              <td><span class="rr rr-good">1:2.5</span></td>
+              <td><span class="dot dot-closed"></span>Closed</td>
+              <td class="mono text-positive" style="font-weight:600">+$523.00</td>
+            </tr>
+            <tr>
+              <td class="mono text-muted">Feb 28</td>
+              <td style="font-weight:600">META</td>
+              <td><span class="badge badge-short">Short</span></td>
+              <td class="mono">$520.30</td>
+              <td class="mono">$513.05</td>
+              <td><span class="rr rr-good">1:3.0</span></td>
+              <td><span class="dot dot-closed"></span>Closed</td>
+              <td class="mono text-positive" style="font-weight:600">+$724.50</td>
+            </tr>
+            <tr>
+              <td class="mono text-muted">Feb 27</td>
+              <td style="font-weight:600">AMZN</td>
+              <td><span class="badge badge-long">Long</span></td>
+              <td class="mono">$186.50</td>
+              <td class="mono">$184.20</td>
+              <td><span class="rr rr-ok">1:1.5</span></td>
+              <td><span class="dot dot-closed"></span>Closed</td>
+              <td class="mono text-negative" style="font-weight:600">-$230.00</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- CALENDAR SECTION -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">Calendar</span>
+      </div>
+      <div class="calendar">
+        <div class="cal-header">
+          <div class="cal-nav">
+            <button>&larr;</button>
+          </div>
+          <div class="cal-title">February 2026</div>
+          <div class="cal-nav">
+            <button>&rarr;</button>
+          </div>
+        </div>
+        <div class="cal-grid">
+          <div class="cal-weekday">Mo</div><div class="cal-weekday">Tu</div><div class="cal-weekday">We</div><div class="cal-weekday">Th</div><div class="cal-weekday">Fr</div><div class="cal-weekday">Sa</div><div class="cal-weekday">Su</div><div class="cal-weekday" style="min-width:52px">Wk</div>
+          <!-- Week 1 -->
+          <div class="cal-day dim"><span class="cal-num">26</span></div>
+          <div class="cal-day dim"><span class="cal-num">27</span></div>
+          <div class="cal-day dim"><span class="cal-num">28</span></div>
+          <div class="cal-day dim"><span class="cal-num">29</span></div>
+          <div class="cal-day dim"><span class="cal-num">30</span></div>
+          <div class="cal-day dim"><span class="cal-num">31</span></div>
+          <div class="cal-day"><span class="cal-num">1</span></div>
+          <div class="cal-week-total"></div>
+          <!-- Week 2 -->
+          <div class="cal-day pos"><span class="cal-num">2</span><span class="cal-pnl">+$320</span><span class="cal-pct">+0.6%</span></div>
+          <div class="cal-day neg"><span class="cal-num">3</span><span class="cal-pnl">-$180</span><span class="cal-pct">-0.4%</span></div>
+          <div class="cal-day pos"><span class="cal-num">4</span><span class="cal-pnl">+$540</span><span class="cal-pct">+1.1%</span></div>
+          <div class="cal-day pos"><span class="cal-num">5</span><span class="cal-pnl">+$290</span><span class="cal-pct">+0.6%</span></div>
+          <div class="cal-day neg"><span class="cal-num">6</span><span class="cal-pnl">-$410</span><span class="cal-pct">-0.8%</span></div>
+          <div class="cal-day"><span class="cal-num">7</span></div>
+          <div class="cal-day"><span class="cal-num">8</span></div>
+          <div class="cal-week-total pos"><span class="cal-pnl">+$560</span><span class="cal-pct">+1.1%</span></div>
+          <!-- Week 3 -->
+          <div class="cal-day pos"><span class="cal-num">9</span><span class="cal-pnl">+$670</span><span class="cal-pct">+1.3%</span></div>
+          <div class="cal-day pos"><span class="cal-num">10</span><span class="cal-pnl">+$125</span><span class="cal-pct">+0.2%</span></div>
+          <div class="cal-day neg"><span class="cal-num">11</span><span class="cal-pnl">-$340</span><span class="cal-pct">-0.7%</span></div>
+          <div class="cal-day pos"><span class="cal-num">12</span><span class="cal-pnl">+$890</span><span class="cal-pct">+1.8%</span></div>
+          <div class="cal-day pos"><span class="cal-num">13</span><span class="cal-pnl">+$210</span><span class="cal-pct">+0.4%</span></div>
+          <div class="cal-day"><span class="cal-num">14</span></div>
+          <div class="cal-day"><span class="cal-num">15</span></div>
+          <div class="cal-week-total pos"><span class="cal-pnl">+$1,555</span><span class="cal-pct">+3.0%</span></div>
+          <!-- Week 4 -->
+          <div class="cal-day neg"><span class="cal-num">16</span><span class="cal-pnl">-$150</span><span class="cal-pct">-0.3%</span></div>
+          <div class="cal-day pos"><span class="cal-num">17</span><span class="cal-pnl">+$480</span><span class="cal-pct">+1.0%</span></div>
+          <div class="cal-day pos"><span class="cal-num">18</span><span class="cal-pnl">+$320</span><span class="cal-pct">+0.6%</span></div>
+          <div class="cal-day neg"><span class="cal-num">19</span><span class="cal-pnl">-$560</span><span class="cal-pct">-1.1%</span></div>
+          <div class="cal-day pos"><span class="cal-num">20</span><span class="cal-pnl">+$740</span><span class="cal-pct">+1.5%</span></div>
+          <div class="cal-day"><span class="cal-num">21</span></div>
+          <div class="cal-day"><span class="cal-num">22</span></div>
+          <div class="cal-week-total pos"><span class="cal-pnl">+$830</span><span class="cal-pct">+1.7%</span></div>
+          <!-- Week 5 -->
+          <div class="cal-day pos"><span class="cal-num">23</span><span class="cal-pnl">+$510</span><span class="cal-pct">+1.0%</span></div>
+          <div class="cal-day neg"><span class="cal-num">24</span><span class="cal-pnl">-$280</span><span class="cal-pct">-0.6%</span></div>
+          <div class="cal-day pos"><span class="cal-num">25</span><span class="cal-pnl">+$620</span><span class="cal-pct">+1.2%</span></div>
+          <div class="cal-day pos"><span class="cal-num">26</span><span class="cal-pnl">+$340</span><span class="cal-pct">+0.7%</span></div>
+          <div class="cal-day pos"><span class="cal-num">27</span><span class="cal-pnl">+$724</span><span class="cal-pct">+1.4%</span></div>
+          <div class="cal-day pos"><span class="cal-num">28</span><span class="cal-pnl">+$523</span><span class="cal-pct">+1.0%</span></div>
+          <div class="cal-day dim"><span class="cal-num">1</span></div>
+          <div class="cal-week-total pos"><span class="cal-pnl">+$2,437</span><span class="cal-pct">+4.7%</span></div>
+        </div>
+        <div class="cal-summary">
+          <span class="cal-summary-label">February Total</span>
+          <span class="cal-summary-val text-positive">+$5,382.00 (+10.5%)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="design-label">Design 1: Terminal Pro</div>
+
+<script>
+function toggleTheme(){
+  const html=document.documentElement;
+  const btn=document.getElementById('themeBtn');
+  if(html.dataset.theme==='dark'){html.dataset.theme='light';btn.innerHTML='&#9728;'}
+  else{html.dataset.theme='dark';btn.innerHTML='&#9790;'}
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Background circle -->
+  <circle cx="100" cy="100" r="90" fill="#1e3a5f" />
+  <!-- Subtle inner glow -->
+  <circle cx="100" cy="100" r="78" fill="none" stroke="#2563eb" stroke-width="1" opacity="0.3" />
+  <!-- Letter T formed as a chart candlestick -->
+  <!-- Horizontal bar of T -->
+  <rect x="50" y="50" width="100" height="14" rx="3" fill="#ffffff" />
+  <!-- Vertical bar of T (candlestick body) -->
+  <rect x="90" y="50" width="20" height="90" rx="3" fill="#ffffff" />
+  <!-- Chart line underneath -->
+  <polyline points="35,155 60,140 80,150 100,125 120,135 140,120 165,130"
+    fill="none" stroke="#22c55e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+  <!-- Small dots on chart -->
+  <circle cx="100" cy="125" r="3" fill="#22c55e" />
+  <circle cx="140" cy="120" r="3" fill="#22c55e" />
+</svg>

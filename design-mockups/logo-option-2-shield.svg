@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Shield / book shape -->
+  <path d="M100 20 L170 50 L170 120 Q170 170 100 185 Q30 170 30 120 L30 50 Z"
+    fill="#0f172a" stroke="#2563eb" stroke-width="2" />
+  <!-- Inner gradient effect -->
+  <path d="M100 32 L160 57 L160 118 Q160 160 100 173 Q40 160 40 118 L40 57 Z"
+    fill="#1e293b" />
+  <!-- Stylized T with ascending arrow -->
+  <rect x="62" y="65" width="76" height="10" rx="2" fill="#ffffff" />
+  <rect x="92" y="65" width="16" height="65" rx="2" fill="#ffffff" />
+  <!-- Upward arrow on right side -->
+  <path d="M140 130 L140 85 L130 95 M140 85 L150 95"
+    fill="none" stroke="#22c55e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+  <!-- Subtle horizontal lines (journal lines) -->
+  <line x1="55" y1="145" x2="95" y2="145" stroke="#475569" stroke-width="1.5" stroke-linecap="round" />
+  <line x1="55" y1="153" x2="85" y2="153" stroke="#475569" stroke-width="1.5" stroke-linecap="round" />
+  <line x1="55" y1="161" x2="75" y2="161" stroke="#475569" stroke-width="1.5" stroke-linecap="round" />
+</svg>

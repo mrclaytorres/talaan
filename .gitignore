@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+frontend/build/
+frontend/.svelte-kit/
+backend/.next/
+backend/dist/
+backend/payload-types.ts
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage/
+test-results/
+playwright-report/
+
+# Docker
+backend/media/
+
+# Capacitor native projects
+frontend/ios/
+frontend/android/
+
+# Misc
+*.log
+*.tmp

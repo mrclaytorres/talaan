@@ -1,0 +1,16 @@
+node_modules/
+.git/
+.gitignore
+.env*
+*.md
+coverage/
+test-results/
+playwright-report/
+frontend/ios/
+frontend/android/
+frontend/.svelte-kit/
+backend/.next/
+backend/media/
+specs/
+.specify/
+.claude/

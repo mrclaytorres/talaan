@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Rounded square background -->
+  <rect x="15" y="15" width="170" height="170" rx="38" fill="#2563eb" />
+  <!-- Bold T letterform -->
+  <rect x="48" y="52" width="104" height="16" rx="4" fill="#ffffff" />
+  <rect x="88" y="52" width="24" height="100" rx="4" fill="#ffffff" />
+  <!-- Two small candlestick bars flanking the T -->
+  <!-- Left candle (red/down) -->
+  <line x1="62" y1="90" x2="62" y2="135" stroke="#fca5a5" stroke-width="2" stroke-linecap="round" />
+  <rect x="56" y="100" width="12" height="20" rx="2" fill="#ef4444" />
+  <!-- Right candle (green/up) -->
+  <line x1="138" y1="85" x2="138" y2="140" stroke="#86efac" stroke-width="2" stroke-linecap="round" />
+  <rect x="132" y="95" width="12" height="25" rx="2" fill="#22c55e" />
+</svg>
