@@ -63,8 +63,12 @@ class TradesStore {
 				data.exitPrice,
 				data.positionSize ?? null,
 			);
-			data.pnlAmount = pnl.amount ?? undefined;
-			data.pnlPercent = pnl.percent;
+			if (data.pnlAmount === undefined || data.pnlAmount === null) {
+				data.pnlAmount = pnl.amount ?? undefined;
+			}
+			if (data.pnlPercent === undefined || data.pnlPercent === null) {
+				data.pnlPercent = pnl.percent;
+			}
 		} else {
 			data.rrRatio = calculateRRRatio(
 				data.entryPrice,

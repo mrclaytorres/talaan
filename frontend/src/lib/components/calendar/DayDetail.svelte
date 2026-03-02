@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import type { TradePosition } from '$lib/types/index.js';
 	import { formatDate, formatPrice, formatCurrency, formatPercent } from '$lib/utils/formatters.js';
 	import Badge from '$lib/components/ui/Badge.svelte';
@@ -12,6 +13,11 @@
 	}
 
 	let { open = $bindable(false), date, trades, onclose }: Props = $props();
+
+	function handleAddTrade() {
+		onclose();
+		goto(`/trades/new?date=${date}`);
+	}
 
 	const totalPnL = $derived(() => {
 		let amount = 0;
@@ -27,8 +33,9 @@
 <Modal
 	bind:open
 	title="Trades on {formatDate(date)}"
-	confirmLabel=""
+	confirmLabel="Add Trade"
 	cancelLabel="Close"
+	onconfirm={handleAddTrade}
 	oncancel={onclose}
 >
 	{#if trades.length === 0}

@@ -15,6 +15,18 @@
 	let showDropdown = $state(false);
 	let searching = $state(false);
 	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+	let recentSymbols = $state<string[]>([]);
+
+	function symbolsToTickers(symbols: string[]): Ticker[] {
+		return symbols.map((symbol) => ({
+			symbol,
+			name: '',
+			assetClass: 'stock' as const,
+			exchange: null,
+			baseCurrency: null,
+			quoteCurrency: null,
+		}));
+	}
 
 	function handleInput(e: Event) {
 		const input = e.target as HTMLInputElement;
@@ -38,9 +50,27 @@
 		try {
 			const ds = getDataService();
 			results = await ds.searchTickers(query);
+
+			// Fall back to filtering recent trade symbols when the tickers
+			// collection is empty or the query matched nothing.
+			if (results.length === 0 && recentSymbols.length > 0) {
+				const q = query.toUpperCase();
+				const filtered = recentSymbols.filter((s) => s.includes(q));
+				results = symbolsToTickers(filtered);
+			}
+
 			showDropdown = results.length > 0;
 		} catch {
-			results = [];
+			// On API error, still try recent symbols so the field stays useful.
+			if (recentSymbols.length > 0) {
+				const q = query.toUpperCase();
+				const filtered = recentSymbols.filter((s) => s.includes(q));
+				results = symbolsToTickers(filtered);
+				showDropdown = results.length > 0;
+			} else {
+				results = [];
+				showDropdown = false;
+			}
 		} finally {
 			searching = false;
 		}
@@ -49,16 +79,10 @@
 	async function loadRecent() {
 		try {
 			const ds = getDataService();
-			const recent = await ds.getRecentTickers(5);
+			const recent = await ds.getRecentTickers(20);
+			recentSymbols = recent;
 			if (recent.length > 0) {
-				results = recent.map((symbol) => ({
-					symbol,
-					name: '',
-					assetClass: 'stock' as const,
-					exchange: null,
-					baseCurrency: null,
-					quoteCurrency: null,
-				}));
+				results = symbolsToTickers(recent.slice(0, 5));
 				showDropdown = true;
 			}
 		} catch {

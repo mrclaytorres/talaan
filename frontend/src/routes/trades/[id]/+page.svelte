@@ -3,7 +3,9 @@
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { tradesStore } from '$lib/stores/trades.svelte.js';
+	import { getDataService } from '$lib/services/index.js';
 	import { formatDate, formatPrice, formatCurrency, formatPercent, formatRRRatio } from '$lib/utils/formatters.js';
+	import type { TradeImage } from '$lib/types/index.js';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import LoadingSpinner from '$lib/components/ui/LoadingSpinner.svelte';
@@ -17,12 +19,18 @@
 	let closeModalOpen = $state(false);
 	let closeExitPrice = $state<number | string>('');
 	let error = $state('');
+	let images = $state<TradeImage[]>([]);
 
 	const tradeId = $derived($page.params.id ?? '');
 	const trade = $derived(tradesStore.currentTrade);
 
-	onMount(() => {
-		tradesStore.loadTrade(tradeId);
+	onMount(async () => {
+		await tradesStore.loadTrade(tradeId);
+		try {
+			images = await getDataService().getTradeImages(tradeId);
+		} catch {
+			// non-critical
+		}
 	});
 
 	async function handleDelete() {
@@ -160,7 +168,7 @@
 
 		<div class="detail-card">
 			<h2>Images</h2>
-			<ImageAttachment tradeId={trade.id} images={trade.images ?? []} editable={false} />
+			<ImageAttachment tradeId={trade.id} bind:images editable={false} />
 		</div>
 
 		<Modal

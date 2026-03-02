@@ -3,6 +3,37 @@ import { PayloadAdapter } from './payload.js';
 
 let _dataService: DataService | null = null;
 
+/**
+ * Create a Proxy-based DataService that lazily loads SQLiteAdapter on native.
+ * This avoids bundling @capacitor-community/sqlite in the web build.
+ */
+function createNativeDataService(): DataService {
+	let adapterPromise: Promise<DataService> | null = null;
+
+	function getAdapter(): Promise<DataService> {
+		if (!adapterPromise) {
+			adapterPromise = import('./sqlite.js').then(async (mod) => {
+				const adapter = new mod.SQLiteAdapter();
+				await adapter.initialize();
+				return adapter;
+			});
+		}
+		return adapterPromise;
+	}
+
+	return new Proxy({} as DataService, {
+		get(_target, prop: string) {
+			return async (...args: unknown[]) => {
+				const adapter = await getAdapter();
+				const method = adapter[prop as keyof DataService] as (
+					...a: unknown[]
+				) => unknown;
+				return method.apply(adapter, args);
+			};
+		},
+	});
+}
+
 export function createDataService(): DataService {
 	// Check if running on a native platform (Capacitor)
 	const isNative =
@@ -10,12 +41,7 @@ export function createDataService(): DataService {
 		window.Capacitor?.isNativePlatform?.() === true;
 
 	if (isNative) {
-		// Dynamically import SQLiteAdapter only on native platforms
-		// to avoid bundling Capacitor SQLite on web
-		throw new Error(
-			'SQLiteAdapter: dynamic import not yet wired. ' +
-				'Will be implemented when mobile dev begins.',
-		);
+		return createNativeDataService();
 	}
 
 	const apiUrl =

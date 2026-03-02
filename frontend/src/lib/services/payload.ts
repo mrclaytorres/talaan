@@ -130,6 +130,7 @@ export class PayloadAdapter implements DataService {
 			params.set('where[date][less_than_equal]', filters.dateEnd);
 		}
 
+		params.set('depth', '0');
 		return this.request<PaginatedResult<TradePosition>>(
 			`/trade-positions?${params.toString()}`,
 		);
@@ -137,7 +138,7 @@ export class PayloadAdapter implements DataService {
 
 	async getTrade(id: string): Promise<TradePosition | null> {
 		try {
-			return await this.request<TradePosition>(`/trade-positions/${id}`);
+			return await this.request<TradePosition>(`/trade-positions/${id}?depth=0`);
 		} catch {
 			return null;
 		}
@@ -153,6 +154,7 @@ export class PayloadAdapter implements DataService {
 		params.set('where[date][less_than_equal]', end);
 		params.set('where[status][equals]', 'closed');
 		params.set('limit', '10000');
+		params.set('depth', '0');
 
 		if (accountId) {
 			params.set('where[account][equals]', accountId);
@@ -166,7 +168,7 @@ export class PayloadAdapter implements DataService {
 
 	async createTrade(data: CreateTradeData): Promise<TradePosition> {
 		const result = await this.request<{ doc: TradePosition }>(
-			'/trade-positions',
+			'/trade-positions?depth=0',
 			{
 				method: 'POST',
 				body: JSON.stringify({
@@ -186,7 +188,7 @@ export class PayloadAdapter implements DataService {
 		// yet the form may pass it through. Sending it causes Payload to reject the PATCH.
 		const { account: _account, ...updateData } = data as UpdateTradeData & { account?: unknown };
 		const result = await this.request<{ doc: TradePosition }>(
-			`/trade-positions/${id}`,
+			`/trade-positions/${id}?depth=0`,
 			{
 				method: 'PATCH',
 				body: JSON.stringify(updateData),
@@ -215,8 +217,8 @@ export class PayloadAdapter implements DataService {
 	async uploadImage(tradeId: string, file: File): Promise<TradeImage> {
 		const formData = new FormData();
 		formData.append('file', file);
-		formData.append('trade', tradeId);
-		formData.append('sortOrder', '0');
+		// Payload v3 multipart uploads require non-file fields as a JSON string in _payload
+		formData.append('_payload', JSON.stringify({ trade: Number(tradeId), sortOrder: 0 }));
 
 		const res = await fetch(`${this.baseUrl}/trade-images`, {
 			method: 'POST',
@@ -251,7 +253,7 @@ export class PayloadAdapter implements DataService {
 
 	async getRecentTickers(limit: number): Promise<string[]> {
 		const result = await this.request<PaginatedResult<TradePosition>>(
-			`/trade-positions?sort=-date&limit=${limit}`,
+			`/trade-positions?sort=-date&limit=${limit}&depth=0`,
 		);
 		const symbols = new Set<string>();
 		for (const trade of result.docs) {

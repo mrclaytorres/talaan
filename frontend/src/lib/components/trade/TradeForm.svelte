@@ -14,18 +14,19 @@
 		trade?: TradePosition;
 		accountId: string;
 		startingCapital?: number;
+		initialDate?: string;
 		onsubmit: (data: CreateTradeData) => Promise<void>;
 		oncancel: () => void;
 	}
 
-	let { trade, accountId, startingCapital = 0, onsubmit, oncancel }: Props = $props();
+	let { trade, accountId, startingCapital = 0, initialDate, onsubmit, oncancel }: Props = $props();
 
 	let loading = $state(false);
 	let errors = $state<Record<string, string>>({});
 	let warnings = $state<string[]>([]);
 
 	// Form fields
-	let date = $state(trade?.date?.split('T')[0] ?? new Date().toISOString().split('T')[0]);
+	let date = $state(trade?.date?.split('T')[0] ?? initialDate ?? new Date().toISOString().split('T')[0]);
 	let tickerSymbol = $state(trade?.tickerSymbol ?? '');
 	let direction = $state<TradeDirection>(trade?.direction ?? 'long');
 	let entryPrice = $state<number | string>(trade?.entryPrice ?? '');
@@ -35,6 +36,7 @@
 	let exitPrice = $state<number | string>(trade?.exitPrice ?? '');
 	let pnlAmount = $state<number | string>(trade?.pnlAmount ?? '');
 	let pnlPercent = $state<number | string>(trade?.pnlPercent ?? '');
+	// True after the user manually types in the P&L % field; cleared when they type in P&L Amount.
 	let pnlPercentManual = $state(false);
 	let status = $state(trade?.status ?? 'open');
 	let notes = $state(trade?.notes ?? '');
@@ -82,16 +84,16 @@
 		}
 	});
 
-	// Auto-calculate P&L % using per-trade formula (FR-017):
-	// (P&L amount / (entry price × position size)) × 100
-	function recalcPnlPercent() {
-		if (pnlPercentManual) return;
-		const amount = Number(pnlAmount);
-		const entry = Number(entryPrice);
-		const size = Number(positionSize);
-		if (pnlAmount !== '' && !isNaN(amount) && entry > 0 && size > 0) {
-			pnlPercent = Math.round(((amount / (entry * size)) * 100) * 100) / 100;
-		}
+	// Recalculate P&L % = (amount / startingCapital) × 100.
+	// Reads amount from the DOM event so the value is always current (no Svelte
+	// reactivity timing issues — $effect wrote to pnlPercent which interacted with
+	// bind:value in ways that corrupted pnlAmount on save).
+	function calcPnlPercent(e: Event) {
+		pnlPercentManual = false;
+		if (startingCapital <= 0) return;
+		const amount = (e.target as HTMLInputElement).valueAsNumber;
+		if (isNaN(amount)) return;
+		pnlPercent = Math.round(((amount / startingCapital) * 100) * 100) / 100;
 	}
 
 	function isEmptyHtml(html: string): boolean {
@@ -175,7 +177,7 @@
 	</div>
 
 	<div class="form-grid form-grid-3">
-		<Input type="number" label="Entry Price" bind:value={entryPrice} step="any" error={errors.entryPrice} required oninput={() => recalcPnlPercent()} />
+		<Input type="number" label="Entry Price" bind:value={entryPrice} step="any" error={errors.entryPrice} required />
 		<Input type="number" label="Stop Loss" bind:value={stopLoss} step="any" error={errors.stopLoss} required />
 		<Input type="number" label="Take Profit" bind:value={takeProfit} step="any" error={errors.takeProfit} required={status !== 'closed'} placeholder={status === 'closed' ? 'Optional' : ''} />
 	</div>
@@ -194,15 +196,15 @@
 	{/if}
 
 	<div class="form-grid">
-		<Input type="number" label="Position Size" bind:value={positionSize} step="any" error={errors.positionSize} placeholder="Optional" oninput={() => recalcPnlPercent()} />
+		<Input type="number" label="Position Size" bind:value={positionSize} step="any" error={errors.positionSize} placeholder="Optional" />
 		{#if status === 'closed'}
 			<Input type="number" label="Exit Price" bind:value={exitPrice} step="any" error={errors.exitPrice} required />
 		{/if}
 	</div>
 
 	<div class="form-grid">
-		<Input type="number" label="P&L Amount ($)" bind:value={pnlAmount} step="any" placeholder="Optional" oninput={() => { pnlPercentManual = false; recalcPnlPercent(); }} />
-		<Input type="number" label="P&L (%)" bind:value={pnlPercent} step="any" placeholder="Auto from P&L + size" oninput={() => { pnlPercentManual = true; }} />
+		<Input type="number" label="P&L Amount ($)" bind:value={pnlAmount} step="any" placeholder="Optional" oninput={calcPnlPercent} />
+		<Input type="number" label="P&L (%)" bind:value={pnlPercent} step="any" placeholder="Auto from P&L ÷ capital" oninput={() => { pnlPercentManual = true; }} />
 	</div>
 
 	<div class="notes-field">

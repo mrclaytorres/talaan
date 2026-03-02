@@ -13,9 +13,11 @@
 	import RRBadge from '$lib/components/trade/RRBadge.svelte';
 	import PnLChart from '$lib/components/charts/PnLChart.svelte';
 	import TickerPieChart from '$lib/components/charts/TickerPieChart.svelte';
+	import { goto } from '$app/navigation';
 	import CalendarMonth from '$lib/components/calendar/CalendarMonth.svelte';
 	import CalendarYear from '$lib/components/calendar/CalendarYear.svelte';
 	import DayDetail from '$lib/components/calendar/DayDetail.svelte';
+	import AccountSwitcher from '$lib/components/account/AccountSwitcher.svelte';
 
 	// ─── Trades table state ───
 	let statusFilter = $state<TradeStatus | 'all'>('all');
@@ -125,8 +127,17 @@
 	}
 
 	function handleDayClick(date: string) {
-		selectedDate = date;
-		dayDetailOpen = true;
+		const trades = allClosedTrades.filter((t) => {
+			const d = new Date(t.date);
+			const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+			return key === date;
+		});
+		if (trades.length === 0) {
+			goto(`/trades/new?date=${date}`);
+		} else {
+			selectedDate = date;
+			dayDetailOpen = true;
+		}
 	}
 
 	function handleMonthClick(year: number, month: number) {
@@ -172,6 +183,11 @@
 </script>
 
 <div class="dashboard-page">
+	<!-- ACCOUNT SWITCHER — mobile only -->
+	<div class="mobile-account-switcher">
+		<AccountSwitcher />
+	</div>
+
 	<!-- STAT CARDS -->
 	<div class="stat-grid">
 		<div class="stat-card">
@@ -397,6 +413,18 @@
 		margin: 0 auto;
 	}
 
+	/* ─── MOBILE ACCOUNT SWITCHER ─── */
+	.mobile-account-switcher {
+		display: block;
+		margin-bottom: 12px;
+	}
+
+	@media (min-width: 768px) {
+		.mobile-account-switcher {
+			display: none;
+		}
+	}
+
 	/* ─── STAT GRID ─── */
 	.stat-grid {
 		display: grid;
@@ -578,12 +606,14 @@
 		background: var(--bg-surface);
 		border: 1px solid var(--border);
 		border-radius: var(--radius);
-		overflow: hidden;
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
 	}
 
 	table {
 		width: 100%;
 		border-collapse: collapse;
+		white-space: nowrap;
 	}
 
 	thead th {
@@ -697,6 +727,16 @@
 	@media (max-width: 640px) {
 		.hide-mobile {
 			display: none;
+		}
+
+		thead th {
+			padding: 8px 8px;
+			font-size: 10px;
+		}
+
+		tbody td {
+			padding: 8px 8px;
+			font-size: 12px;
 		}
 
 		.stat-grid {
