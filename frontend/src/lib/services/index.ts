@@ -35,10 +35,11 @@ function createNativeDataService(): DataService {
 }
 
 export function createDataService(): DataService {
-	// Check if running on a native platform (Capacitor)
+	// Check if running on a native platform (Capacitor Android/iOS or Electron)
 	const isNative =
 		typeof window !== 'undefined' &&
-		window.Capacitor?.isNativePlatform?.() === true;
+		(window.Capacitor?.isNativePlatform?.() === true ||
+			window.electronFS !== undefined);
 
 	if (isNative) {
 		return createNativeDataService();

@@ -4,12 +4,9 @@
 
 /**
  * Returns true when running inside an Electron renderer process.
- * Works because Electron's renderer exposes `window.process` with type 'renderer'.
+ * Detects via the `electronFS` bridge exposed by the preload script
+ * (contextIsolation prevents access to `window.process`).
  */
 export function isElectron(): boolean {
-	return (
-		typeof window !== 'undefined' &&
-		typeof window.process === 'object' &&
-		(window.process as NodeJS.Process)?.type === 'renderer'
-	);
+	return typeof window !== 'undefined' && window.electronFS !== undefined;
 }
