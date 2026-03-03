@@ -199,7 +199,11 @@ export class ElectronCapacitorApp {
     });
 
     // Link electron plugins into the system.
-    setupCapacitorElectronPlugins();
+    try {
+      setupCapacitorElectronPlugins();
+    } catch (err) {
+      console.error('Failed to setup Capacitor Electron plugins:', err);
+    }
 
     // When the web app is loaded we hide the splashscreen if needed and show the mainwindow.
     this.MainWindow.webContents.on('dom-ready', () => {

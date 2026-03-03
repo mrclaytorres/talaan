@@ -122,7 +122,14 @@ export class SQLiteAdapter implements DataService {
 	private _isElectron = false;
 
 	constructor() {
-		this.sqlite = new SQLiteConnection(CapacitorSQLite);
+		// On Electron, use the direct IPC bridge exposed by the preload script
+		// instead of the Capacitor plugin system (which may fail due to
+		// contextBridge serialization issues with CapacitorCustomPlatform).
+		const sqlitePlugin =
+			isElectron() && window.electronCapSQLite
+				? (window.electronCapSQLite as unknown as typeof CapacitorSQLite)
+				: CapacitorSQLite;
+		this.sqlite = new SQLiteConnection(sqlitePlugin);
 	}
 
 	async initialize(): Promise<void> {

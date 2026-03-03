@@ -18,6 +18,8 @@ declare global {
 			mkdir(path: string): Promise<void>;
 			getAppDataPath(): Promise<string>;
 		};
+		/** Direct SQLite IPC bridge exposed by Electron preload as fallback */
+		electronCapSQLite?: Record<string, (...args: unknown[]) => Promise<unknown>>;
 	}
 }
 

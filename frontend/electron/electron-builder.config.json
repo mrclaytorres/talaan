@@ -11,6 +11,10 @@
     "app/**/*",
     "node_modules/**/*"
   ],
+  "asarUnpack": [
+    "node_modules/better-sqlite3-multiple-ciphers/**/*",
+    "node_modules/@capacitor-community/sqlite/electron/**/*"
+  ],
   "publish": {
     "provider": "github"
   },
