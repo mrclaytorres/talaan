@@ -47,8 +47,14 @@ if (electronIsDev) {
   setupContentSecurityPolicy(myCapacitorApp.getCustomURLScheme());
   // Initialize our app, build windows, and load content.
   await myCapacitorApp.init();
-  // Check for updates if we are in a packaged app.
-  autoUpdater.checkForUpdatesAndNotify();
+  // Check for updates only in packaged builds (not dev) and only if a publish
+  // provider is configured. Without a valid provider this would throw
+  // "Unsupported provider: undefined".
+  if (!electronIsDev) {
+    autoUpdater.checkForUpdatesAndNotify().catch(() => {
+      // No publish provider configured — silently skip auto-update.
+    });
+  }
 })();
 
 // Handle when all of our windows are close (platforms have their own expectations).
