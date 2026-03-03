@@ -747,5 +747,9 @@
 		.stat-value {
 			font-size: 18px;
 		}
+
+		.calendar-section {
+			padding: 8px 6px;
+		}
 	}
 </style>

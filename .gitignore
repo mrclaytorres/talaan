@@ -38,3 +38,7 @@ frontend/android/
 # Misc
 *.log
 *.tmp
+*.png
+*.jpg
+*.jpeg
+*.gif

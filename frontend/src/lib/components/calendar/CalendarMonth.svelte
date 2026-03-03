@@ -245,6 +245,10 @@
 	}
 
 	@media (max-width: 640px) {
+		.calendar-month {
+			padding: 0;
+		}
+
 		.weekday-header {
 			grid-template-columns: repeat(7, 1fr);
 		}
