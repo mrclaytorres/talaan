@@ -12,7 +12,14 @@ import type {
 	TradeFilters,
 	Ticker,
 } from '$lib/types/index.js';
-import type { DataService, PaginatedResult } from './types.js';
+import type {
+	DataService,
+	PaginatedResult,
+	DailyPnLRow,
+	MonthlyPnLRow,
+	DashboardSummary,
+	TickerDistributionRow,
+} from './types.js';
 
 export class PayloadAdapter implements DataService {
 	private baseUrl: string;
@@ -261,5 +268,72 @@ export class PayloadAdapter implements DataService {
 			if (symbols.size >= limit) break;
 		}
 		return [...symbols];
+	}
+
+	// --- Dashboard aggregations ---
+
+	private dashboardCache: {
+		key: string;
+		data: { dailyPnL: DailyPnLRow[]; monthlyPnL: MonthlyPnLRow[]; summary: DashboardSummary; tickerDistribution: TickerDistributionRow[] };
+		expiresAt: number;
+	} | null = null;
+
+	private async fetchDashboardStats(accountId?: string): Promise<{
+		dailyPnL: DailyPnLRow[];
+		monthlyPnL: MonthlyPnLRow[];
+		summary: DashboardSummary;
+		tickerDistribution: TickerDistributionRow[];
+	}> {
+		const cacheKey = accountId ?? '__all__';
+		if (this.dashboardCache && this.dashboardCache.key === cacheKey && Date.now() < this.dashboardCache.expiresAt) {
+			return this.dashboardCache.data;
+		}
+
+		const params = accountId ? `?accountId=${accountId}` : '';
+		const data = await this.request<{
+			dailyPnL: DailyPnLRow[];
+			monthlyPnL: MonthlyPnLRow[];
+			summary: DashboardSummary;
+			tickerDistribution: TickerDistributionRow[];
+		}>(`/dashboard/stats${params}`);
+
+		this.dashboardCache = { key: cacheKey, data, expiresAt: Date.now() + 5000 };
+		return data;
+	}
+
+	async getDailyPnL(accountId?: string): Promise<DailyPnLRow[]> {
+		const stats = await this.fetchDashboardStats(accountId);
+		return stats.dailyPnL;
+	}
+
+	async getMonthlyPnL(accountId?: string): Promise<MonthlyPnLRow[]> {
+		const stats = await this.fetchDashboardStats(accountId);
+		return stats.monthlyPnL;
+	}
+
+	async getDashboardSummary(accountId?: string): Promise<DashboardSummary> {
+		const stats = await this.fetchDashboardStats(accountId);
+		return stats.summary;
+	}
+
+	async getTickerDistribution(accountId?: string): Promise<TickerDistributionRow[]> {
+		const stats = await this.fetchDashboardStats(accountId);
+		return stats.tickerDistribution;
+	}
+
+	async getTradesForDate(date: string, accountId?: string): Promise<TradePosition[]> {
+		const params = new URLSearchParams();
+		params.set('where[date][greater_than_equal]', `${date}T00:00:00`);
+		params.set('where[date][less_than_equal]', `${date}T23:59:59`);
+		params.set('where[status][equals]', 'closed');
+		params.set('limit', '100');
+		params.set('depth', '0');
+		if (accountId) {
+			params.set('where[account][equals]', accountId);
+		}
+		const result = await this.request<PaginatedResult<TradePosition>>(
+			`/trade-positions?${params.toString()}`,
+		);
+		return result.docs;
 	}
 }

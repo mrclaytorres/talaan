@@ -332,26 +332,68 @@ sudo dpkg -i talaan_1.0.0_amd64.deb
 
 Windows builds **must be done on Windows** — cross-compiling from Linux is not supported because the SQLite native module (`better-sqlite3-multiple-ciphers`) requires platform-specific compilation.
 
-If you're using WSL2, build from a **Windows terminal** (PowerShell or cmd, not WSL):
+If you're using WSL2, build from a **Windows terminal** (PowerShell or cmd, not WSL).
+
+**Step 1.** Clone or navigate to the repo from Windows:
 
 ```powershell
-# 1. Clone or access the repo from Windows
+cd C:\path\to\claytradingjournal\frontend
+```
+
+**Step 2.** Install frontend dependencies:
+
+```powershell
+npm install
+```
+
+**Step 3.** Build the SvelteKit web app and sync to Electron (this also runs the plugin fix script automatically):
+
+```powershell
+npm run build:electron
+```
+
+> **Important:** Always use `build:electron` instead of running `build` and `cap sync` separately. The `cap sync` command resets `electron-plugins.js` to a format that breaks SQLite plugin registration. The `build:electron` script automatically runs `scripts/fix-electron-plugins.js` after syncing to restore the correct plugin configuration.
+
+**Step 4.** Install Electron dependencies (first time, or after adding new packages):
+
+```powershell
+cd electron
+npm install
+```
+
+**Step 5.** Build the Windows installer:
+
+```powershell
+npm run electron:make
+```
+
+**Step 6.** Run the installer:
+
+```
+frontend\electron\dist\Talaan Setup 1.0.0.exe
+```
+
+##### Manual build (alternative)
+
+If you need to run steps individually instead of using `build:electron`:
+
+```powershell
 cd C:\path\to\claytradingjournal\frontend
 
-# 2. Install frontend dependencies and build the web app
-npm install
+# 1. Build the SvelteKit static SPA
 npm run build
 
-# 3. Sync web assets to Electron
+# 2. Sync web assets to Electron
 npx cap sync @capacitor-community/electron
 
-# 4. Install Electron dependencies and build the Windows installer
+# 3. Fix the SQLite plugin registration (REQUIRED after every cap sync)
+node scripts/fix-electron-plugins.js
+
+# 4. Build and package
 cd electron
 npm install
 npm run electron:make
 ```
-
-Output: `frontend\electron\dist\Talaan Setup 1.0.0.exe`
 
 #### macOS (.dmg)
 

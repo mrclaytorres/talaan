@@ -723,4 +723,253 @@ describe('SQLiteAdapter', () => {
 			expect(typeof accounts[0].user).toBe('string');
 		});
 	});
+
+	// --- Dashboard Aggregations ---
+	describe('getDailyPnL', () => {
+		it('returns grouped daily rows with correct mapping', async () => {
+			const adapter = await createInitializedAdapter();
+			mockQuery.mockResolvedValueOnce({
+				values: [
+					{ day: '2026-01-15', amount: 250, percent: 2.5, trade_count: 3, wins: 2, losses: 1 },
+					{ day: '2026-01-16', amount: -100, percent: -1.0, trade_count: 2, wins: 0, losses: 2 },
+				],
+			});
+
+			const rows = await adapter.getDailyPnL();
+
+			expect(rows).toHaveLength(2);
+			expect(rows[0]).toEqual({
+				date: '2026-01-15', amount: 250, percent: 2.5,
+				tradeCount: 3, wins: 2, losses: 1,
+			});
+			expect(rows[1]).toEqual({
+				date: '2026-01-16', amount: -100, percent: -1.0,
+				tradeCount: 2, wins: 0, losses: 2,
+			});
+			// Verify SQL contains GROUP BY
+			const sql = mockQuery.mock.calls[mockQuery.mock.calls.length - 1][0];
+			expect(sql).toContain('GROUP BY');
+			expect(sql).toContain("status = 'closed'");
+		});
+
+		it('applies account filter when accountId provided', async () => {
+			const adapter = await createInitializedAdapter();
+			mockQuery.mockResolvedValueOnce({ values: [] });
+
+			await adapter.getDailyPnL('5');
+
+			const call = mockQuery.mock.calls[mockQuery.mock.calls.length - 1];
+			expect(call[0]).toContain('account_id = ?');
+			expect(call[1]).toEqual([5]);
+		});
+
+		it('returns empty array when no data', async () => {
+			const adapter = await createInitializedAdapter();
+			mockQuery.mockResolvedValueOnce({ values: [] });
+
+			const rows = await adapter.getDailyPnL();
+			expect(rows).toEqual([]);
+		});
+	});
+
+	describe('getMonthlyPnL', () => {
+		it('returns grouped monthly rows with trading days count', async () => {
+			const adapter = await createInitializedAdapter();
+			mockQuery.mockResolvedValueOnce({
+				values: [
+					{ month: '2026-01', amount: 1500, percent: 15.0, trading_days: 20 },
+					{ month: '2026-02', amount: -300, percent: -3.0, trading_days: 18 },
+				],
+			});
+
+			const rows = await adapter.getMonthlyPnL();
+
+			expect(rows).toHaveLength(2);
+			expect(rows[0]).toEqual({ month: '2026-01', amount: 1500, percent: 15.0, tradingDays: 20 });
+			expect(rows[1]).toEqual({ month: '2026-02', amount: -300, percent: -3.0, tradingDays: 18 });
+		});
+
+		it('applies account filter when accountId provided', async () => {
+			const adapter = await createInitializedAdapter();
+			mockQuery.mockResolvedValueOnce({ values: [] });
+
+			await adapter.getMonthlyPnL('3');
+
+			const call = mockQuery.mock.calls[mockQuery.mock.calls.length - 1];
+			expect(call[0]).toContain('account_id = ?');
+			expect(call[1]).toEqual([3]);
+		});
+	});
+
+	describe('getDashboardSummary', () => {
+		it('returns summary with all stats from a single row', async () => {
+			const adapter = await createInitializedAdapter();
+			mockQuery.mockResolvedValueOnce({
+				values: [{
+					total_pnl: 5000,
+					total_closed_trades: 100,
+					wins: 60,
+					losses: 35,
+					today_amount: 250,
+					today_percent: 2.5,
+					today_count: 3,
+				}],
+			});
+
+			const summary = await adapter.getDashboardSummary();
+
+			expect(summary).toEqual({
+				totalPnl: 5000,
+				totalClosedTrades: 100,
+				wins: 60,
+				losses: 35,
+				todayAmount: 250,
+				todayPercent: 2.5,
+				todayCount: 3,
+			});
+		});
+
+		it('returns zeroed summary when no data', async () => {
+			const adapter = await createInitializedAdapter();
+			mockQuery.mockResolvedValueOnce({ values: [] });
+
+			const summary = await adapter.getDashboardSummary();
+
+			expect(summary).toEqual({
+				totalPnl: 0, totalClosedTrades: 0,
+				wins: 0, losses: 0,
+				todayAmount: 0, todayPercent: 0, todayCount: 0,
+			});
+		});
+
+		it('passes today date three times for CASE WHEN clauses', async () => {
+			const adapter = await createInitializedAdapter();
+			mockQuery.mockResolvedValueOnce({
+				values: [{ total_pnl: 0, total_closed_trades: 0, wins: 0, losses: 0, today_amount: 0, today_percent: 0, today_count: 0 }],
+			});
+
+			await adapter.getDashboardSummary();
+
+			const call = mockQuery.mock.calls[mockQuery.mock.calls.length - 1];
+			const params = call[1] as string[];
+			// First 3 params are today's date
+			expect(params[0]).toBe(params[1]);
+			expect(params[1]).toBe(params[2]);
+			expect(params[0]).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+		});
+
+		it('applies account filter when accountId provided', async () => {
+			const adapter = await createInitializedAdapter();
+			mockQuery.mockResolvedValueOnce({
+				values: [{ total_pnl: 0, total_closed_trades: 0, wins: 0, losses: 0, today_amount: 0, today_percent: 0, today_count: 0 }],
+			});
+
+			await adapter.getDashboardSummary('7');
+
+			const call = mockQuery.mock.calls[mockQuery.mock.calls.length - 1];
+			expect(call[0]).toContain('account_id = ?');
+			// today, today, today, accountId
+			expect(call[1][3]).toBe(7);
+		});
+	});
+
+	describe('getTickerDistribution', () => {
+		it('returns ticker counts sorted by count desc', async () => {
+			const adapter = await createInitializedAdapter();
+			mockQuery.mockResolvedValueOnce({
+				values: [
+					{ ticker: 'AAPL', count: 25 },
+					{ ticker: 'MSFT', count: 15 },
+					{ ticker: 'GOOGL', count: 10 },
+				],
+			});
+
+			const rows = await adapter.getTickerDistribution();
+
+			expect(rows).toEqual([
+				{ ticker: 'AAPL', count: 25 },
+				{ ticker: 'MSFT', count: 15 },
+				{ ticker: 'GOOGL', count: 10 },
+			]);
+		});
+
+		it('groups smallest tickers as Other when exceeding limit', async () => {
+			const adapter = await createInitializedAdapter();
+			// Return 5 tickers, use limit=3
+			mockQuery.mockResolvedValueOnce({
+				values: [
+					{ ticker: 'AAPL', count: 25 },
+					{ ticker: 'MSFT', count: 15 },
+					{ ticker: 'GOOGL', count: 10 },
+					{ ticker: 'TSLA', count: 5 },
+					{ ticker: 'AMZN', count: 3 },
+				],
+			});
+
+			const rows = await adapter.getTickerDistribution(undefined, 3);
+
+			expect(rows).toHaveLength(3);
+			expect(rows[0]).toEqual({ ticker: 'AAPL', count: 25 });
+			expect(rows[1]).toEqual({ ticker: 'MSFT', count: 15 });
+			expect(rows[2]).toEqual({ ticker: 'Other', count: 18 }); // 10 + 5 + 3
+		});
+
+		it('applies account filter when accountId provided', async () => {
+			const adapter = await createInitializedAdapter();
+			mockQuery.mockResolvedValueOnce({ values: [] });
+
+			await adapter.getTickerDistribution('2');
+
+			const call = mockQuery.mock.calls[mockQuery.mock.calls.length - 1];
+			expect(call[0]).toContain('account_id = ?');
+			expect(call[1]).toEqual([2]);
+		});
+	});
+
+	describe('getTradesForDate', () => {
+		it('returns full trade objects for a specific date', async () => {
+			const adapter = await createInitializedAdapter();
+			mockQuery.mockResolvedValueOnce({
+				values: [{
+					id: 10, account_id: 1, date: '2026-02-15',
+					ticker_symbol: 'AAPL', direction: 'long',
+					entry_price: 150, stop_loss: 145, take_profit: 165,
+					position_size: 100, exit_price: 160, status: 'closed',
+					rr_ratio: 3, pnl_amount: 1000, pnl_percent: 6.67,
+					notes: null, created_at: '2026-02-15T00:00:00.000Z',
+					updated_at: '2026-02-15T00:00:00.000Z',
+				}],
+			});
+
+			const trades = await adapter.getTradesForDate('2026-02-15');
+
+			expect(trades).toHaveLength(1);
+			expect(trades[0].id).toBe('10');
+			expect(trades[0].tickerSymbol).toBe('AAPL');
+			expect(trades[0].pnlAmount).toBe(1000);
+		});
+
+		it('filters by date and closed status', async () => {
+			const adapter = await createInitializedAdapter();
+			mockQuery.mockResolvedValueOnce({ values: [] });
+
+			await adapter.getTradesForDate('2026-03-01');
+
+			const call = mockQuery.mock.calls[mockQuery.mock.calls.length - 1];
+			expect(call[0]).toContain('date(date) = ?');
+			expect(call[0]).toContain("status = 'closed'");
+			expect(call[1]).toEqual(['2026-03-01']);
+		});
+
+		it('applies account filter when accountId provided', async () => {
+			const adapter = await createInitializedAdapter();
+			mockQuery.mockResolvedValueOnce({ values: [] });
+
+			await adapter.getTradesForDate('2026-03-01', '4');
+
+			const call = mockQuery.mock.calls[mockQuery.mock.calls.length - 1];
+			expect(call[0]).toContain('account_id = ?');
+			expect(call[1]).toEqual(['2026-03-01', 4]);
+		});
+	});
 });

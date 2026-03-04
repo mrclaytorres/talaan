@@ -412,6 +412,36 @@
 
 ---
 
+## Phase 21: Dashboard SQL Query Optimization & Chart Improvements
+
+**Purpose**: Push dashboard aggregations to the data layer (SQL GROUP BY / backend endpoint), returning ~365 daily rows + a summary object instead of 10K full trade records. Add time-range presets to P&L chart and fix dark mode font colors.
+
+**Independent Test**: Load dashboard → stat cards show correct today P&L, fund standing, win rate → calendar cells show correct daily P&L → PnL Over Time chart default is Weekly, switch between D/W/M/Y → Ticker Distribution pie chart legend text is light on dark mode → click calendar day → DayDetail shows correct trades fetched on-demand → switch accounts → all data refreshes. Open new trade form → Ticker/Pair input dropdown text is light on dark mode.
+
+### Implementation for Dashboard SQL Query Optimization
+
+- [x] T136 Add aggregation types and DataService methods in `frontend/src/lib/services/types.ts` — add `DailyPnLRow`, `MonthlyPnLRow`, `DashboardSummary`, `TickerDistributionRow` interfaces. Add 5 new DataService methods: `getDailyPnL(accountId?)`, `getMonthlyPnL(accountId?)`, `getDashboardSummary(accountId?)`, `getTickerDistribution(accountId?, limit?)`, `getTradesForDate(date, accountId?)`
+
+- [x] T137 Implement SQLiteAdapter aggregation methods in `frontend/src/lib/services/sqlite.ts` — `getDailyPnL` uses `GROUP BY date(date)` returning daily rows with SUM(pnl_amount), wins/losses counts. `getMonthlyPnL` uses `GROUP BY strftime('%Y-%m', date)` with COUNT(DISTINCT date). `getDashboardSummary` returns single-row with total P&L, win/loss counts, today stats via CASE WHEN. `getTickerDistribution` groups by ticker_symbol with "Other" bucket for overflow. `getTradesForDate` fetches full trade objects for a specific date (DayDetail modal)
+
+- [x] T138 Create backend dashboard-stats endpoint in `backend/src/endpoints/dashboard-stats.ts` — `PayloadHandler` at `GET /api/dashboard/stats?accountId=X`. Uses `payload.find({ collection: 'trade-positions', where, limit: 10000, depth: 0 })`, aggregates server-side in one pass: dailyPnL, monthlyPnL, summary, tickerDistribution. Returns single JSON response. Register in `backend/src/payload.config.ts`
+
+- [x] T139 Implement PayloadAdapter aggregation methods in `frontend/src/lib/services/payload.ts` — private `fetchDashboardStats(accountId?)` calls `GET /dashboard/stats` with 5-second in-memory cache to deduplicate concurrent calls. `getDailyPnL`, `getMonthlyPnL`, `getDashboardSummary`, `getTickerDistribution` delegate to cached fetch. `getTradesForDate` uses existing getTrades with date filter
+
+- [x] T140 Update PnLChart component in `frontend/src/lib/components/charts/PnLChart.svelte` — change props from `trades: TradePosition[]` to `dailyData: DailyPnLRow[]`. Add D/W/M/Y time preset buttons (daily, weekly, monthly, yearly) with weekly as default. Aggregate dailyData client-side by selected preset. Build cumulative P&L series and win/loss bars from aggregated data
+
+- [x] T141 Update TickerPieChart component in `frontend/src/lib/components/charts/TickerPieChart.svelte` — change props from `trades: TradePosition[]` to `distributionData: TickerDistributionRow[]`. Use data directly instead of `buildTickerDistribution`. Fix dark mode legend font color: add `fontColor` to each `generateLabels` item (`#e4e4e7` dark / `#52525b` light)
+
+- [x] T142 Refactor dashboard page in `frontend/src/routes/dashboard/+page.svelte` — remove `allClosedTrades`, `loadClosedTrades()`, `aggregateDailyPnL`/`aggregateMonthlyPnL` imports. Add `loadDashboardData()` using `Promise.all` for all 4 aggregation calls. Derive `dailyPnL`/`monthlyPnL` Maps from row arrays via `$derived.by()`. Stat cards derive from `DashboardSummary` (O(1)). DayDetail modal fetches trades on-demand via `getTradesForDate`
+
+- [x] T143 Add SQLiteAdapter aggregation tests in `frontend/tests/unit/sqlite-adapter.test.ts` — 16 new tests covering: getDailyPnL (GROUP BY, account filter, empty), getMonthlyPnL (GROUP BY month, trading days), getDashboardSummary (single-row, empty shape, today params, account filter), getTickerDistribution (counts, "Other" bucket, account filter), getTradesForDate (date filter, account filter, full trade mapping)
+
+- [x] T144 Fix dark mode font color on Ticker/Pair input dropdown in `frontend/src/lib/components/trade/TickerSearch.svelte` — change `.dropdown` background to `var(--bg-surface)`, add `color: var(--text-primary)` to `.dropdown-item` and `.ticker-symbol`, change `.ticker-name` to `var(--text-muted)`, update hover to `var(--bg-hover)`. Add `color: var(--text-primary)` and `background: var(--bg-surface)` to `.input`
+
+**Checkpoint**: Dashboard loads ~15 KB instead of ~1.5 MB per load. P&L chart supports D/W/M/Y presets (weekly default). All dark mode font colors correct on charts and ticker input. 131 tests passing, 0 svelte-check errors.
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -436,10 +466,11 @@
 - **SQLiteAdapter & Android APK (Phase 18)**: Depends on Phase 2 (DataService interface, types) + Phase 9 (T061 mobile build pipeline)
 - **Mobile Polish & Build Improvements (Phase 19)**: Depends on Phase 18 (Android APK) + Phase 12 (dashboard) + Phase 8 (export/import)
 - **Electron Desktop Support (Phase 20)**: Depends on Phase 18 (SQLiteAdapter) + Phase 19 (mobile polish, shared platform patterns)
+- **Dashboard SQL Optimization & Chart Improvements (Phase 21)**: Depends on Phase 12 (dashboard restructuring) + Phase 16 (dashboard enhancements) + Phase 18 (SQLiteAdapter)
 
 ### Recommended Sequential Order
 
-Phase 1 → Phase 2 → Phase 3 (US1) → Phase 4 (US2) → Phase 5 (US3) → Phase 6 (US4) → Phase 7 (US5) → Phase 8 (Export/Import) → Phase 9 (Polish) → Phase 10 (Starting Capital & Auto P&L %) → Phase 11 (Rich Text Editor) → Phase 12 (Dashboard Restructuring) → Phase 13 (Dark Mode Fixes) → Phase 14 (R:R & TP Fixes) → Phase 15 (Networking Fixes) → Phase 16 (Branding) → Phase 17 (Account & Dashboard Bug Fixes) → Phase 18 (SQLiteAdapter & Android APK) → Phase 19 (Mobile Polish & Build Improvements) → Phase 20 (Electron Desktop Support)
+Phase 1 → Phase 2 → Phase 3 (US1) → Phase 4 (US2) → Phase 5 (US3) → Phase 6 (US4) → Phase 7 (US5) → Phase 8 (Export/Import) → Phase 9 (Polish) → Phase 10 (Starting Capital & Auto P&L %) → Phase 11 (Rich Text Editor) → Phase 12 (Dashboard Restructuring) → Phase 13 (Dark Mode Fixes) → Phase 14 (R:R & TP Fixes) → Phase 15 (Networking Fixes) → Phase 16 (Branding) → Phase 17 (Account & Dashboard Bug Fixes) → Phase 18 (SQLiteAdapter & Android APK) → Phase 19 (Mobile Polish & Build Improvements) → Phase 20 (Electron Desktop Support) → Phase 21 (Dashboard SQL Optimization & Chart Improvements)
 
 ### Within Each User Story
 

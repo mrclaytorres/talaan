@@ -214,6 +214,8 @@
 		border: 1px solid var(--color-border, #d1d5db);
 		border-radius: 0.375rem;
 		font-size: 1rem;
+		color: var(--text-primary, #18181b);
+		background: var(--bg-surface, #ffffff);
 	}
 
 	.input:focus {
@@ -249,8 +251,8 @@
 		left: 0;
 		right: 0;
 		z-index: 50;
-		background: var(--color-bg, #ffffff);
-		border: 1px solid var(--color-border, #d1d5db);
+		background: var(--bg-surface, #ffffff);
+		border: 1px solid var(--border, #d1d5db);
 		border-radius: 0.375rem;
 		box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 		max-height: 15rem;
@@ -272,20 +274,22 @@
 		font-size: 0.875rem;
 		border-radius: 0.25rem;
 		text-align: left;
+		color: var(--text-primary, #18181b);
 	}
 
 	.dropdown-item:hover {
-		background: var(--color-hover, #f3f4f6);
+		background: var(--bg-hover, #f3f4f6);
 	}
 
 	.ticker-symbol {
 		font-weight: 700;
 		min-width: 4rem;
+		color: var(--text-primary, #18181b);
 	}
 
 	.ticker-name {
 		flex: 1;
-		color: var(--color-text-muted, #6b7280);
+		color: var(--text-muted, #6b7280);
 		font-size: 0.8125rem;
 		overflow: hidden;
 		text-overflow: ellipsis;

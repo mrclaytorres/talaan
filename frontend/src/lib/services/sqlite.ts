@@ -27,7 +27,14 @@ import type {
 	Ticker,
 	AssetClass,
 } from '$lib/types/index.js';
-import type { DataService, PaginatedResult } from './types.js';
+import type {
+	DataService,
+	PaginatedResult,
+	DailyPnLRow,
+	MonthlyPnLRow,
+	DashboardSummary,
+	TickerDistributionRow,
+} from './types.js';
 
 const DB_NAME = 'talaan_journal';
 const IMAGE_DIR = 'trade_images';
@@ -763,5 +770,152 @@ export class SQLiteAdapter implements DataService {
 		return (result.values ?? []).map(
 			(row) => row.ticker_symbol as string,
 		);
+	}
+
+	// --- Dashboard aggregations ---
+
+	async getDailyPnL(accountId?: string): Promise<DailyPnLRow[]> {
+		await this.initialize();
+		const params: unknown[] = [];
+		let accountClause = '';
+		if (accountId) {
+			accountClause = ' AND account_id = ?';
+			params.push(Number(accountId));
+		}
+
+		const result = await this.db.query(
+			`SELECT date(date) AS day,
+				COALESCE(SUM(pnl_amount), 0) AS amount,
+				COALESCE(SUM(pnl_percent), 0) AS percent,
+				COUNT(*) AS trade_count,
+				SUM(CASE WHEN pnl_amount > 0 THEN 1 ELSE 0 END) AS wins,
+				SUM(CASE WHEN pnl_amount < 0 THEN 1 ELSE 0 END) AS losses
+			FROM trade_positions
+			WHERE status = 'closed' AND pnl_amount IS NOT NULL${accountClause}
+			GROUP BY date(date) ORDER BY date(date);`,
+			params,
+		);
+
+		return (result.values ?? []).map((row) => ({
+			date: row.day as string,
+			amount: row.amount as number,
+			percent: row.percent as number,
+			tradeCount: row.trade_count as number,
+			wins: row.wins as number,
+			losses: row.losses as number,
+		}));
+	}
+
+	async getMonthlyPnL(accountId?: string): Promise<MonthlyPnLRow[]> {
+		await this.initialize();
+		const params: unknown[] = [];
+		let accountClause = '';
+		if (accountId) {
+			accountClause = ' AND account_id = ?';
+			params.push(Number(accountId));
+		}
+
+		const result = await this.db.query(
+			`SELECT strftime('%Y-%m', date) AS month,
+				COALESCE(SUM(pnl_amount), 0) AS amount,
+				COALESCE(SUM(pnl_percent), 0) AS percent,
+				COUNT(DISTINCT date(date)) AS trading_days
+			FROM trade_positions
+			WHERE status = 'closed' AND pnl_amount IS NOT NULL${accountClause}
+			GROUP BY strftime('%Y-%m', date) ORDER BY month;`,
+			params,
+		);
+
+		return (result.values ?? []).map((row) => ({
+			month: row.month as string,
+			amount: row.amount as number,
+			percent: row.percent as number,
+			tradingDays: row.trading_days as number,
+		}));
+	}
+
+	async getDashboardSummary(accountId?: string): Promise<DashboardSummary> {
+		await this.initialize();
+		const today = new Date().toISOString().slice(0, 10);
+		const params: unknown[] = [today, today, today];
+		let accountClause = '';
+		if (accountId) {
+			accountClause = ' AND account_id = ?';
+			params.push(Number(accountId));
+		}
+
+		const result = await this.db.query(
+			`SELECT COALESCE(SUM(pnl_amount), 0) AS total_pnl,
+				COUNT(*) AS total_closed_trades,
+				SUM(CASE WHEN pnl_amount > 0 THEN 1 ELSE 0 END) AS wins,
+				SUM(CASE WHEN pnl_amount < 0 THEN 1 ELSE 0 END) AS losses,
+				COALESCE(SUM(CASE WHEN date(date) = ? THEN pnl_amount ELSE 0 END), 0) AS today_amount,
+				COALESCE(SUM(CASE WHEN date(date) = ? THEN pnl_percent ELSE 0 END), 0) AS today_percent,
+				SUM(CASE WHEN date(date) = ? THEN 1 ELSE 0 END) AS today_count
+			FROM trade_positions
+			WHERE status = 'closed' AND pnl_amount IS NOT NULL${accountClause};`,
+			params,
+		);
+
+		const row = result.values?.[0];
+		if (!row) {
+			return { totalPnl: 0, totalClosedTrades: 0, wins: 0, losses: 0, todayAmount: 0, todayPercent: 0, todayCount: 0 };
+		}
+		return {
+			totalPnl: row.total_pnl as number,
+			totalClosedTrades: row.total_closed_trades as number,
+			wins: (row.wins as number) ?? 0,
+			losses: (row.losses as number) ?? 0,
+			todayAmount: row.today_amount as number,
+			todayPercent: row.today_percent as number,
+			todayCount: (row.today_count as number) ?? 0,
+		};
+	}
+
+	async getTickerDistribution(accountId?: string, limit: number = 8): Promise<TickerDistributionRow[]> {
+		await this.initialize();
+		const params: unknown[] = [];
+		let accountClause = '';
+		if (accountId) {
+			accountClause = ' AND account_id = ?';
+			params.push(Number(accountId));
+		}
+
+		const result = await this.db.query(
+			`SELECT ticker_symbol AS ticker, COUNT(*) AS count
+			FROM trade_positions
+			WHERE status = 'closed'${accountClause}
+			GROUP BY ticker_symbol ORDER BY count DESC;`,
+			params,
+		);
+
+		const rows = (result.values ?? []).map((row) => ({
+			ticker: row.ticker as string,
+			count: row.count as number,
+		}));
+
+		if (rows.length <= limit) return rows;
+
+		const top = rows.slice(0, limit - 1);
+		const otherCount = rows.slice(limit - 1).reduce((sum, r) => sum + r.count, 0);
+		top.push({ ticker: 'Other', count: otherCount });
+		return top;
+	}
+
+	async getTradesForDate(date: string, accountId?: string): Promise<TradePosition[]> {
+		await this.initialize();
+		const params: unknown[] = [date];
+		let accountClause = '';
+		if (accountId) {
+			accountClause = ' AND account_id = ?';
+			params.push(Number(accountId));
+		}
+
+		const result = await this.db.query(
+			`SELECT * FROM trade_positions
+			WHERE date(date) = ? AND status = 'closed'${accountClause};`,
+			params,
+		);
+		return (result.values ?? []).map((row) => this.mapRowToTrade(row));
 	}
 }

@@ -266,7 +266,11 @@
 	<section class="settings-section">
 		<h2>App Info</h2>
 		<p class="info-text">Talaan v{__APP_VERSION__}</p>
-		<p class="info-text">Developed by ClayTorres</p>
+		<p class="info-text">Developed by <a
+				href="https://github.com/mrclaytorres"
+				target="_blank"
+				rel="noopener noreferrer"
+				class="coffee-link">ClayTorres</a></p>
 		<p class="info-text">
 			<a
 				href="https://buymeacoffee.com/claytorres"
