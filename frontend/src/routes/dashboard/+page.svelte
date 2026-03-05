@@ -4,8 +4,9 @@
 	import { accountsStore } from '$lib/stores/accounts.svelte.js';
 	import { getDataService } from '$lib/services/index.js';
 	import { formatDate, formatPrice, formatCurrency, formatPercent } from '$lib/utils/formatters.js';
-	import { aggregateDailyPnL, aggregateMonthlyPnL } from '$lib/utils/pnl.js';
 	import type { TradeStatus, TradePosition } from '$lib/types/index.js';
+	import type { DailyPnLRow, MonthlyPnLRow, DashboardSummary, TickerDistributionRow } from '$lib/services/types.js';
+	import type { DailyPnL, MonthlyPnL } from '$lib/utils/pnl.js';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import LoadingSpinner from '$lib/components/ui/LoadingSpinner.svelte';
@@ -13,9 +14,11 @@
 	import RRBadge from '$lib/components/trade/RRBadge.svelte';
 	import PnLChart from '$lib/components/charts/PnLChart.svelte';
 	import TickerPieChart from '$lib/components/charts/TickerPieChart.svelte';
+	import { goto } from '$app/navigation';
 	import CalendarMonth from '$lib/components/calendar/CalendarMonth.svelte';
 	import CalendarYear from '$lib/components/calendar/CalendarYear.svelte';
 	import DayDetail from '$lib/components/calendar/DayDetail.svelte';
+	import AccountSwitcher from '$lib/components/account/AccountSwitcher.svelte';
 
 	// ─── Trades table state ───
 	let statusFilter = $state<TradeStatus | 'all'>('all');
@@ -51,36 +54,51 @@
 		await tradesStore.loadTrades(filters);
 	}
 
-	const todayPnl = $derived(() => {
-		const today = new Date().toISOString().slice(0, 10);
-		let amount = 0;
-		let percent = 0;
-		let count = 0;
-		for (const t of allClosedTrades) {
-			if (t.date?.startsWith(today) && t.pnlAmount !== null) {
-				amount += t.pnlAmount;
-				percent += t.pnlPercent ?? 0;
-				count++;
-			}
-		}
-		return { amount, percent, count };
+	// ─── Aggregated dashboard data ───
+	let dailyPnLRows = $state<DailyPnLRow[]>([]);
+	let monthlyPnLRows = $state<MonthlyPnLRow[]>([]);
+	let dashboardSummary = $state<DashboardSummary>({
+		totalPnl: 0, totalClosedTrades: 0, wins: 0, losses: 0,
+		todayAmount: 0, todayPercent: 0, todayCount: 0,
 	});
+	let tickerDistData = $state<TickerDistributionRow[]>([]);
+	let calendarLoading = $state(true);
+
+	// Derive Map<string, DailyPnL> for calendar components
+	const dailyPnL = $derived.by(() => {
+		const map = new Map<string, DailyPnL>();
+		for (const row of dailyPnLRows) {
+			map.set(row.date, { amount: row.amount, percent: row.percent, tradeCount: row.tradeCount });
+		}
+		return map;
+	});
+
+	const monthlyPnL = $derived.by(() => {
+		const map = new Map<string, MonthlyPnL>();
+		for (const row of monthlyPnLRows) {
+			map.set(row.month, { amount: row.amount, percent: row.percent, tradingDays: row.tradingDays });
+		}
+		return map;
+	});
+
+	// Stat card derivations — O(1) from summary
+	const todayPnl = $derived(() => ({
+		amount: dashboardSummary.todayAmount,
+		percent: dashboardSummary.todayPercent,
+		count: dashboardSummary.todayCount,
+	}));
 
 	const fundStanding = $derived(() => {
 		const accounts = accountsStore.accounts;
 		const activeId = accountsStore.activeAccountId;
 		const relevant = activeId === 'all' ? accounts : accounts.filter((a) => String(a.id) === activeId);
 		const startingCapital = relevant.reduce((sum, a) => sum + (a.startingCapital ?? 0), 0);
-		const totalPnl = allClosedTrades.reduce((sum, t) => sum + (t.pnlAmount ?? 0), 0);
-		return { balance: startingCapital + totalPnl, startingCapital };
+		return { balance: startingCapital + dashboardSummary.totalPnl, startingCapital };
 	});
 
 	const winRate = $derived(() => {
-		if (allClosedTrades.length === 0) return null;
-		const wins = allClosedTrades.filter(
-			(t) => t.pnlAmount !== null && t.pnlAmount > 0,
-		).length;
-		return Math.round((wins / allClosedTrades.length) * 100);
+		if (dashboardSummary.totalClosedTrades === 0) return null;
+		return Math.round((dashboardSummary.wins / dashboardSummary.totalClosedTrades) * 100);
 	});
 
 	// ─── Calendar state ───
@@ -91,42 +109,43 @@
 	let currentYear = $state(now.getFullYear());
 	let currentMonth = $state(now.getMonth());
 
-	let allClosedTrades = $state<TradePosition[]>([]);
-	let calendarLoading = $state(true);
-
 	let selectedDate = $state<string | null>(null);
 	let dayDetailOpen = $state(false);
+	let dayDetailTrades = $state<TradePosition[]>([]);
 
-	const dailyPnL = $derived(aggregateDailyPnL(allClosedTrades));
-	const monthlyPnL = $derived(aggregateMonthlyPnL(dailyPnL));
-
-	const dayTrades = $derived(() => {
-		if (!selectedDate) return [];
-		return allClosedTrades.filter((t) => {
-			const d = new Date(t.date);
-			const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-			return key === selectedDate;
-		});
-	});
-
-	async function loadClosedTrades() {
+	async function loadDashboardData() {
 		calendarLoading = true;
 		try {
 			const ds = getDataService();
-			const filters: Record<string, unknown> = { status: 'closed', limit: 10000 };
-			if (accountsStore.activeAccountId !== 'all') {
-				filters.accountId = accountsStore.activeAccountId;
-			}
-			const result = await ds.getTrades(filters);
-			allClosedTrades = result.docs.filter((t) => t.status === 'closed');
+			const accountId = accountsStore.activeAccountId !== 'all' ? accountsStore.activeAccountId : undefined;
+			const [daily, monthly, summary, ticker] = await Promise.all([
+				ds.getDailyPnL(accountId),
+				ds.getMonthlyPnL(accountId),
+				ds.getDashboardSummary(accountId),
+				ds.getTickerDistribution(accountId),
+			]);
+			dailyPnLRows = daily;
+			monthlyPnLRows = monthly;
+			dashboardSummary = summary;
+			tickerDistData = ticker;
 		} finally {
 			calendarLoading = false;
 		}
 	}
 
-	function handleDayClick(date: string) {
-		selectedDate = date;
-		dayDetailOpen = true;
+	async function handleDayClick(date: string) {
+		// Check if any daily row exists for this date
+		const hasTradesForDay = dailyPnLRows.some((r) => r.date === date);
+		if (!hasTradesForDay) {
+			goto(`/trades/new?date=${date}`);
+		} else {
+			selectedDate = date;
+			dayDetailOpen = true;
+			// Fetch trades for this specific date on demand
+			const ds = getDataService();
+			const accountId = accountsStore.activeAccountId !== 'all' ? accountsStore.activeAccountId : undefined;
+			dayDetailTrades = await ds.getTradesForDate(date, accountId);
+		}
 	}
 
 	function handleMonthClick(year: number, month: number) {
@@ -160,18 +179,23 @@
 		if (currentId !== prevAccountId) {
 			prevAccountId = currentId;
 			loadTrades();
-			loadClosedTrades();
+			loadDashboardData();
 		}
 	});
 
 	// ─── Init ───
 	onMount(() => {
 		loadTrades();
-		loadClosedTrades();
+		loadDashboardData();
 	});
 </script>
 
 <div class="dashboard-page">
+	<!-- ACCOUNT SWITCHER — mobile only -->
+	<div class="mobile-account-switcher">
+		<AccountSwitcher />
+	</div>
+
 	<!-- STAT CARDS -->
 	<div class="stat-grid">
 		<div class="stat-card">
@@ -207,14 +231,14 @@
 				<svg class="stat-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
 			</div>
 			<div class="stat-value">{winRate() !== null ? `${winRate()}%` : '--'}</div>
-			<div class="stat-sub">{allClosedTrades.length} closed trades</div>
+			<div class="stat-sub">{dashboardSummary.totalClosedTrades} closed trades</div>
 		</div>
 		<div class="stat-card">
 			<div class="stat-header">
 				<span class="stat-label">Total Trades</span>
 				<svg class="stat-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
 			</div>
-			<div class="stat-value">{tradesStore.trades.length}</div>
+			<div class="stat-value">{tradesStore.totalDocs}</div>
 			<div class="stat-sub">all time</div>
 		</div>
 	</div>
@@ -266,20 +290,21 @@
 			<DayDetail
 				bind:open={dayDetailOpen}
 				date={selectedDate}
-				trades={dayTrades()}
+				trades={dayDetailTrades}
 				onclose={() => {
 					dayDetailOpen = false;
 					selectedDate = null;
+					dayDetailTrades = [];
 				}}
 			/>
 		{/if}
 	</div>
 
 	<!-- CHARTS -->
-	{#if tradesStore.trades.length > 0}
+	{#if dashboardSummary.totalClosedTrades > 0}
 		<div class="charts-grid">
-			<PnLChart trades={tradesStore.trades} />
-			<TickerPieChart trades={tradesStore.trades} />
+			<PnLChart dailyData={dailyPnLRows} />
+			<TickerPieChart distributionData={tickerDistData} />
 		</div>
 	{/if}
 
@@ -395,6 +420,18 @@
 	.dashboard-page {
 		max-width: 1200px;
 		margin: 0 auto;
+	}
+
+	/* ─── MOBILE ACCOUNT SWITCHER ─── */
+	.mobile-account-switcher {
+		display: block;
+		margin-bottom: 12px;
+	}
+
+	@media (min-width: 768px) {
+		.mobile-account-switcher {
+			display: none;
+		}
 	}
 
 	/* ─── STAT GRID ─── */
@@ -578,12 +615,14 @@
 		background: var(--bg-surface);
 		border: 1px solid var(--border);
 		border-radius: var(--radius);
-		overflow: hidden;
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
 	}
 
 	table {
 		width: 100%;
 		border-collapse: collapse;
+		white-space: nowrap;
 	}
 
 	thead th {
@@ -699,6 +738,16 @@
 			display: none;
 		}
 
+		thead th {
+			padding: 8px 8px;
+			font-size: 10px;
+		}
+
+		tbody td {
+			padding: 8px 8px;
+			font-size: 12px;
+		}
+
 		.stat-grid {
 			grid-template-columns: 1fr 1fr;
 			gap: 8px;
@@ -706,6 +755,10 @@
 
 		.stat-value {
 			font-size: 18px;
+		}
+
+		.calendar-section {
+			padding: 8px 6px;
 		}
 	}
 </style>

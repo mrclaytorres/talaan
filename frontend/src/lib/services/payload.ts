@@ -12,7 +12,14 @@ import type {
 	TradeFilters,
 	Ticker,
 } from '$lib/types/index.js';
-import type { DataService, PaginatedResult } from './types.js';
+import type {
+	DataService,
+	PaginatedResult,
+	DailyPnLRow,
+	MonthlyPnLRow,
+	DashboardSummary,
+	TickerDistributionRow,
+} from './types.js';
 
 export class PayloadAdapter implements DataService {
 	private baseUrl: string;
@@ -130,6 +137,7 @@ export class PayloadAdapter implements DataService {
 			params.set('where[date][less_than_equal]', filters.dateEnd);
 		}
 
+		params.set('depth', '0');
 		return this.request<PaginatedResult<TradePosition>>(
 			`/trade-positions?${params.toString()}`,
 		);
@@ -137,7 +145,7 @@ export class PayloadAdapter implements DataService {
 
 	async getTrade(id: string): Promise<TradePosition | null> {
 		try {
-			return await this.request<TradePosition>(`/trade-positions/${id}`);
+			return await this.request<TradePosition>(`/trade-positions/${id}?depth=0`);
 		} catch {
 			return null;
 		}
@@ -153,6 +161,7 @@ export class PayloadAdapter implements DataService {
 		params.set('where[date][less_than_equal]', end);
 		params.set('where[status][equals]', 'closed');
 		params.set('limit', '10000');
+		params.set('depth', '0');
 
 		if (accountId) {
 			params.set('where[account][equals]', accountId);
@@ -166,7 +175,7 @@ export class PayloadAdapter implements DataService {
 
 	async createTrade(data: CreateTradeData): Promise<TradePosition> {
 		const result = await this.request<{ doc: TradePosition }>(
-			'/trade-positions',
+			'/trade-positions?depth=0',
 			{
 				method: 'POST',
 				body: JSON.stringify({
@@ -186,7 +195,7 @@ export class PayloadAdapter implements DataService {
 		// yet the form may pass it through. Sending it causes Payload to reject the PATCH.
 		const { account: _account, ...updateData } = data as UpdateTradeData & { account?: unknown };
 		const result = await this.request<{ doc: TradePosition }>(
-			`/trade-positions/${id}`,
+			`/trade-positions/${id}?depth=0`,
 			{
 				method: 'PATCH',
 				body: JSON.stringify(updateData),
@@ -215,8 +224,8 @@ export class PayloadAdapter implements DataService {
 	async uploadImage(tradeId: string, file: File): Promise<TradeImage> {
 		const formData = new FormData();
 		formData.append('file', file);
-		formData.append('trade', tradeId);
-		formData.append('sortOrder', '0');
+		// Payload v3 multipart uploads require non-file fields as a JSON string in _payload
+		formData.append('_payload', JSON.stringify({ trade: Number(tradeId), sortOrder: 0 }));
 
 		const res = await fetch(`${this.baseUrl}/trade-images`, {
 			method: 'POST',
@@ -251,7 +260,7 @@ export class PayloadAdapter implements DataService {
 
 	async getRecentTickers(limit: number): Promise<string[]> {
 		const result = await this.request<PaginatedResult<TradePosition>>(
-			`/trade-positions?sort=-date&limit=${limit}`,
+			`/trade-positions?sort=-date&limit=${limit}&depth=0`,
 		);
 		const symbols = new Set<string>();
 		for (const trade of result.docs) {
@@ -259,5 +268,72 @@ export class PayloadAdapter implements DataService {
 			if (symbols.size >= limit) break;
 		}
 		return [...symbols];
+	}
+
+	// --- Dashboard aggregations ---
+
+	private dashboardCache: {
+		key: string;
+		data: { dailyPnL: DailyPnLRow[]; monthlyPnL: MonthlyPnLRow[]; summary: DashboardSummary; tickerDistribution: TickerDistributionRow[] };
+		expiresAt: number;
+	} | null = null;
+
+	private async fetchDashboardStats(accountId?: string): Promise<{
+		dailyPnL: DailyPnLRow[];
+		monthlyPnL: MonthlyPnLRow[];
+		summary: DashboardSummary;
+		tickerDistribution: TickerDistributionRow[];
+	}> {
+		const cacheKey = accountId ?? '__all__';
+		if (this.dashboardCache && this.dashboardCache.key === cacheKey && Date.now() < this.dashboardCache.expiresAt) {
+			return this.dashboardCache.data;
+		}
+
+		const params = accountId ? `?accountId=${accountId}` : '';
+		const data = await this.request<{
+			dailyPnL: DailyPnLRow[];
+			monthlyPnL: MonthlyPnLRow[];
+			summary: DashboardSummary;
+			tickerDistribution: TickerDistributionRow[];
+		}>(`/dashboard/stats${params}`);
+
+		this.dashboardCache = { key: cacheKey, data, expiresAt: Date.now() + 5000 };
+		return data;
+	}
+
+	async getDailyPnL(accountId?: string): Promise<DailyPnLRow[]> {
+		const stats = await this.fetchDashboardStats(accountId);
+		return stats.dailyPnL;
+	}
+
+	async getMonthlyPnL(accountId?: string): Promise<MonthlyPnLRow[]> {
+		const stats = await this.fetchDashboardStats(accountId);
+		return stats.monthlyPnL;
+	}
+
+	async getDashboardSummary(accountId?: string): Promise<DashboardSummary> {
+		const stats = await this.fetchDashboardStats(accountId);
+		return stats.summary;
+	}
+
+	async getTickerDistribution(accountId?: string): Promise<TickerDistributionRow[]> {
+		const stats = await this.fetchDashboardStats(accountId);
+		return stats.tickerDistribution;
+	}
+
+	async getTradesForDate(date: string, accountId?: string): Promise<TradePosition[]> {
+		const params = new URLSearchParams();
+		params.set('where[date][greater_than_equal]', `${date}T00:00:00`);
+		params.set('where[date][less_than_equal]', `${date}T23:59:59`);
+		params.set('where[status][equals]', 'closed');
+		params.set('limit', '100');
+		params.set('depth', '0');
+		if (accountId) {
+			params.set('where[account][equals]', accountId);
+		}
+		const result = await this.request<PaginatedResult<TradePosition>>(
+			`/trade-positions?${params.toString()}`,
+		);
+		return result.docs;
 	}
 }

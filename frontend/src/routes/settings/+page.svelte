@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { userStore } from '$lib/stores/user.svelte.js';
 	import { accountsStore } from '$lib/stores/accounts.svelte.js';
+	import { tradesStore } from '$lib/stores/trades.svelte.js';
 	import { validatePassword } from '$lib/utils/validators.js';
 	import { exportJSON, exportCSV, importJSON, downloadBlob } from '$lib/utils/export.js';
 	import { getDataService } from '$lib/services/index.js';
@@ -31,6 +32,7 @@
 	let showImportConfirm = $state(false);
 	let importFile = $state<File | null>(null);
 	let csvAccountId = $state<string>('all');
+	let fileInputRef = $state<HTMLInputElement | null>(null);
 
 	const timezoneOptions = [
 		'UTC',
@@ -91,10 +93,7 @@
 			currentPassword = '';
 			newPassword = '';
 			confirmPassword = '';
-			showNotification(
-				newPassword ? 'Password updated' : 'Password removed',
-				'success',
-			);
+			showNotification(newPassword ? 'Password updated' : 'Password removed', 'success');
 		} catch {
 			showNotification('Failed to update password', 'error');
 		} finally {
@@ -156,14 +155,12 @@
 				`Imported ${result.accounts} account(s) and ${result.trades} trade(s)`,
 				'success',
 			);
-			// Reload stores
+			// Reload all stores so the UI updates immediately
 			await accountsStore.loadAccounts();
 			await userStore.loadUser();
+			await tradesStore.loadTrades();
 		} catch (e) {
-			showNotification(
-				e instanceof Error ? e.message : 'Import failed',
-				'error',
-			);
+			showNotification(e instanceof Error ? e.message : 'Import failed', 'error');
 		} finally {
 			importing = false;
 			importFile = null;
@@ -200,12 +197,7 @@
 			}}
 		>
 			{#if userStore.user?.passwordHash}
-				<Input
-					type="password"
-					label="Current Password"
-					bind:value={currentPassword}
-					required
-				/>
+				<Input type="password" label="Current Password" bind:value={currentPassword} required />
 				<div class="field-spacer"></div>
 			{/if}
 			<Input
@@ -256,25 +248,37 @@
 			</div>
 			<div class="data-action">
 				<p class="data-desc">Import a JSON backup. This will replace all existing data.</p>
-				<label class="import-label">
-					<input
-						type="file"
-						accept=".json,application/json"
-						class="import-input"
-						onchange={handleImportSelect}
-						disabled={importing}
-					/>
-					<Button variant="secondary" loading={importing}>
-						{importing ? 'Importing...' : 'Import Backup'}
-					</Button>
-				</label>
+				<input
+					type="file"
+					accept=".json,application/json"
+					class="import-input"
+					onchange={handleImportSelect}
+					disabled={importing}
+					bind:this={fileInputRef}
+				/>
+				<Button variant="secondary" loading={importing} onclick={() => fileInputRef?.click()}>
+					{importing ? 'Importing...' : 'Import Backup'}
+				</Button>
 			</div>
 		</div>
 	</section>
 
 	<section class="settings-section">
 		<h2>App Info</h2>
-		<p class="info-text">Talaan v0.0.1</p>
+		<p class="info-text">Talaan v{__APP_VERSION__}</p>
+		<p class="info-text">Developed by <a
+				href="https://github.com/mrclaytorres"
+				target="_blank"
+				rel="noopener noreferrer"
+				class="coffee-link">ClayTorres</a></p>
+		<p class="info-text">
+			<a
+				href="https://buymeacoffee.com/claytorres"
+				target="_blank"
+				rel="noopener noreferrer"
+				class="coffee-link">Buy Me a Coffee</a
+			>
+		</p>
 	</section>
 
 	{#if showImportConfirm}
@@ -289,7 +293,10 @@
 				importFile = null;
 			}}
 		>
-			<p>This will <strong>replace all existing data</strong> with the imported backup. This cannot be undone.</p>
+			<p>
+				This will <strong>replace all existing data</strong> with the imported backup. This cannot be
+				undone.
+			</p>
 			<p>Continue?</p>
 		</Modal>
 	{/if}
@@ -374,12 +381,17 @@
 		background: var(--color-bg, #ffffff);
 	}
 
-	.import-label {
-		cursor: pointer;
-		display: inline-block;
-	}
-
 	.import-input {
 		display: none;
+	}
+
+	.coffee-link {
+		color: var(--color-primary, #3b82f6);
+		text-decoration: none;
+		font-weight: 500;
+	}
+
+	.coffee-link:hover {
+		text-decoration: underline;
 	}
 </style>

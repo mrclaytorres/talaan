@@ -63,8 +63,17 @@ class TradesStore {
 				data.exitPrice,
 				data.positionSize ?? null,
 			);
-			data.pnlAmount = pnl.amount ?? undefined;
-			data.pnlPercent = pnl.percent;
+			if (data.pnlAmount === undefined || data.pnlAmount === null) {
+				data.pnlAmount = pnl.amount ?? undefined;
+			}
+			if (data.pnlPercent === undefined || data.pnlPercent === null) {
+				data.pnlPercent = pnl.percent;
+			}
+
+			// If commission is provided, compute net P&L from grossPnl
+			if (data.commission != null && data.grossPnl != null) {
+				data.pnlAmount = data.grossPnl - data.commission;
+			}
 		} else {
 			data.rrRatio = calculateRRRatio(
 				data.entryPrice,
@@ -108,6 +117,13 @@ class TradesStore {
 				if (data.pnlPercent === undefined || data.pnlPercent === null) {
 					data.pnlPercent = pnl.percent;
 				}
+			}
+
+			// If commission is provided, compute net P&L from grossPnl
+			const commission = data.commission !== undefined ? data.commission : existing.commission;
+			const grossPnl = data.grossPnl !== undefined ? data.grossPnl : existing.grossPnl;
+			if (commission != null && grossPnl != null) {
+				data.pnlAmount = grossPnl - commission;
 			}
 		}
 

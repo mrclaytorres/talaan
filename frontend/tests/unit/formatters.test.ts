@@ -47,12 +47,19 @@ describe('formatRRRatio', () => {
 });
 
 describe('formatPrice', () => {
-	it('formats prices above $1 with 2 decimals', () => {
-		expect(formatPrice(150.5)).toBe('150.50');
+	it('preserves exact price as entered', () => {
+		expect(formatPrice(150.5)).toBe('150.5');
 	});
 
-	it('formats sub-dollar prices with more precision', () => {
-		const result = formatPrice(0.00123);
-		expect(result).toBe('0.00123000');
+	it('preserves sub-dollar price precision', () => {
+		expect(formatPrice(0.00123)).toBe('0.00123');
+	});
+
+	it('preserves multi-decimal price without rounding', () => {
+		expect(formatPrice(1234.5678)).toBe('1234.5678');
+	});
+
+	it('displays integer price without trailing decimals', () => {
+		expect(formatPrice(1234)).toBe('1234');
 	});
 });

@@ -1,0 +1,39 @@
+{
+  "appId": "com.claytradingjournal.app",
+  "productName": "Talaan",
+  "directories": {
+    "buildResources": "resources"
+  },
+  "files": [
+    "assets/**/*",
+    "build/**/*",
+    "capacitor.config.*",
+    "app/**/*",
+    "node_modules/**/*"
+  ],
+  "asarUnpack": [
+    "node_modules/better-sqlite3-multiple-ciphers/**/*",
+    "node_modules/@capacitor-community/sqlite/electron/**/*"
+  ],
+  "publish": {
+    "provider": "github"
+  },
+  "nsis": {
+    "allowElevation": true,
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true
+  },
+  "win": {
+    "target": "nsis",
+    "icon": "assets/appIcon.ico"
+  },
+  "mac": {
+    "category": "public.app-category.finance",
+    "target": "dmg"
+  },
+  "linux": {
+    "target": ["AppImage", "deb"],
+    "icon": "assets/appIcon.png",
+    "category": "Office"
+  }
+}

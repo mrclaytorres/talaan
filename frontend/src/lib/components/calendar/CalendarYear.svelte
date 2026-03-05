@@ -79,7 +79,7 @@
 <style>
 	.calendar-year {
 		background: var(--color-bg, #ffffff);
-		border: 1px solid var(--color-border, #e5e7eb);
+		border: none;
 		border-radius: 0.75rem;
 		padding: 1rem;
 	}
