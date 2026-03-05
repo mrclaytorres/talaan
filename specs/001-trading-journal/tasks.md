@@ -442,6 +442,36 @@
 
 ---
 
+## Phase 22: Commission Fees & Dashboard Bug Fix
+
+**Purpose**: Introduce optional commission fees on trades with a toggle, conditional fields (Commission and Gross P&L), auto-calculation of net P&L Amount, and conditional required validation. Fix Total Trades stat card showing paginated count instead of actual total.
+
+**Independent Test**: Open trade form → toggle "Commission fees" → Commission and Gross P&L fields appear → fill both fields → P&L Amount ($) auto-calculates as Gross P&L - Commission → fill only one field → validation requires the other → untoggle → fields hidden and values not submitted. Edit a trade that has commission data → toggle auto-opens with saved values. Dashboard → Total Trades card shows actual total count (not capped at 50). Export/import preserves commission and grossPnl fields.
+
+### Implementation for Commission Fees
+
+- [x] T145 Add `commission` and `grossPnl` fields to trade types in `frontend/src/lib/types/trade.ts` — add `commission: number | null` and `grossPnl: number | null` to `TradePosition`. Add `commission?: number` and `grossPnl?: number` to `CreateTradeData`. Add `commission?: number | null` and `grossPnl?: number | null` to `UpdateTradeData`
+
+- [x] T146 Add `commission` and `grossPnl` fields to backend collection in `backend/src/collections/TradePositions.ts` — add `commission` (type: number, min: 0) and `grossPnl` (type: number) fields after `pnlPercent`
+
+- [x] T147 Create Payload migration for commission columns — `backend/src/migrations/20260305_095639_add_commission_fields.ts` adds `commission` (numeric) and `gross_pnl` (numeric) columns to `trade_positions` table in PostgreSQL
+
+- [x] T148 Update SQLiteAdapter for commission fields in `frontend/src/lib/services/sqlite.ts` — add `migrateCommissionColumns()` method using `ALTER TABLE ADD COLUMN` (idempotent, catches "already exists" errors). Update `mapRowToTrade` to include `commission` and `grossPnl`. Update `createTrade` INSERT to include `commission` and `gross_pnl`. Update `updateTrade` fieldMap with `commission: 'commission'` and `grossPnl: 'gross_pnl'`
+
+- [x] T149 Update trades store for commission auto-calc in `frontend/src/lib/stores/trades.svelte.ts` — in both `createTrade` and `updateTrade`: when `commission` and `grossPnl` are both provided, compute `pnlAmount = grossPnl - commission` (overrides auto-calculated P&L)
+
+- [x] T150 Add commission toggle and fields to TradeForm in `frontend/src/lib/components/trade/TradeForm.svelte` — add `showCommission` toggle state (auto-opens when editing trade with existing commission data). Add Commission ($) and Gross P&L ($) input fields shown when toggled. Add `calcPnlFromCommission()` that computes `pnlAmount = grossPnl - commission` and auto-updates P&L %. Add conditional validation: if one of commission/grossPnl is filled, the other is required. Include `commission` and `grossPnl` in submitted data only when toggle is on
+
+- [x] T151 Update export/import for commission fields — add `commission: number | null` and `grossPnl: number | null` to `ExportTrade` in `frontend/src/lib/types/export.ts`. Update `exportJSON` and `importJSON` in `frontend/src/lib/utils/export.ts` to include commission/grossPnl. Update CSV export headers and row mapping to include `commission` and `gross_pnl` columns
+
+### Dashboard Bug Fix
+
+- [x] T152 Fix Total Trades stat card in `frontend/src/routes/dashboard/+page.svelte` — change Total Trades value from `tradesStore.trades.length` (paginated array capped at 50) to `tradesStore.totalDocs` (actual total count from query)
+
+**Checkpoint**: Commission toggle works on trade form. Auto-calculates net P&L from Gross P&L minus commission. Conditional validation prevents partial commission data. Export/import preserves commission fields. Total Trades card shows correct all-time count. 131 tests passing, 0 svelte-check errors.
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -467,10 +497,11 @@
 - **Mobile Polish & Build Improvements (Phase 19)**: Depends on Phase 18 (Android APK) + Phase 12 (dashboard) + Phase 8 (export/import)
 - **Electron Desktop Support (Phase 20)**: Depends on Phase 18 (SQLiteAdapter) + Phase 19 (mobile polish, shared platform patterns)
 - **Dashboard SQL Optimization & Chart Improvements (Phase 21)**: Depends on Phase 12 (dashboard restructuring) + Phase 16 (dashboard enhancements) + Phase 18 (SQLiteAdapter)
+- **Commission Fees & Dashboard Bug Fix (Phase 22)**: Depends on Phase 4 (US2 TradeForm, trades store) + Phase 18 (SQLiteAdapter) + Phase 8 (export/import) + Phase 21 (dashboard aggregation)
 
 ### Recommended Sequential Order
 
-Phase 1 → Phase 2 → Phase 3 (US1) → Phase 4 (US2) → Phase 5 (US3) → Phase 6 (US4) → Phase 7 (US5) → Phase 8 (Export/Import) → Phase 9 (Polish) → Phase 10 (Starting Capital & Auto P&L %) → Phase 11 (Rich Text Editor) → Phase 12 (Dashboard Restructuring) → Phase 13 (Dark Mode Fixes) → Phase 14 (R:R & TP Fixes) → Phase 15 (Networking Fixes) → Phase 16 (Branding) → Phase 17 (Account & Dashboard Bug Fixes) → Phase 18 (SQLiteAdapter & Android APK) → Phase 19 (Mobile Polish & Build Improvements) → Phase 20 (Electron Desktop Support) → Phase 21 (Dashboard SQL Optimization & Chart Improvements)
+Phase 1 → Phase 2 → Phase 3 (US1) → Phase 4 (US2) → Phase 5 (US3) → Phase 6 (US4) → Phase 7 (US5) → Phase 8 (Export/Import) → Phase 9 (Polish) → Phase 10 (Starting Capital & Auto P&L %) → Phase 11 (Rich Text Editor) → Phase 12 (Dashboard Restructuring) → Phase 13 (Dark Mode Fixes) → Phase 14 (R:R & TP Fixes) → Phase 15 (Networking Fixes) → Phase 16 (Branding) → Phase 17 (Account & Dashboard Bug Fixes) → Phase 18 (SQLiteAdapter & Android APK) → Phase 19 (Mobile Polish & Build Improvements) → Phase 20 (Electron Desktop Support) → Phase 21 (Dashboard SQL Optimization & Chart Improvements) → Phase 22 (Commission Fees & Dashboard Bug Fix)
 
 ### Within Each User Story
 

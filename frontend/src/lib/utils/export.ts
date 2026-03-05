@@ -51,6 +51,8 @@ export async function exportJSON(ds: DataService): Promise<Blob> {
 				rrRatio: trade.rrRatio ?? 0,
 				pnlAmount: trade.pnlAmount,
 				pnlPercent: trade.pnlPercent,
+				commission: trade.commission,
+				grossPnl: trade.grossPnl,
 				notes: trade.notes,
 				images: exportImages,
 			});
@@ -96,7 +98,8 @@ export async function exportCSV(ds: DataService, accountId?: string): Promise<Bl
 	const headers = [
 		'account_name', 'date', 'ticker', 'direction',
 		'entry_price', 'stop_loss', 'take_profit', 'position_size',
-		'exit_price', 'status', 'rr_ratio', 'pnl_amount', 'pnl_percent', 'notes',
+		'exit_price', 'status', 'rr_ratio', 'pnl_amount', 'pnl_percent',
+		'commission', 'gross_pnl', 'notes',
 	];
 
 	const rows = result.docs.map((t) => [
@@ -113,6 +116,8 @@ export async function exportCSV(ds: DataService, accountId?: string): Promise<Bl
 		t.rrRatio != null ? String(t.rrRatio) : '',
 		t.pnlAmount != null ? String(t.pnlAmount) : '',
 		t.pnlPercent != null ? String(t.pnlPercent) : '',
+		t.commission != null ? String(t.commission) : '',
+		t.grossPnl != null ? String(t.grossPnl) : '',
 		escapeCSV(t.notes ?? ''),
 	].join(','));
 
@@ -210,6 +215,8 @@ export async function importJSON(
 				rrRatio: tradeData.rrRatio,
 				pnlAmount: tradeData.pnlAmount ?? undefined,
 				pnlPercent: tradeData.pnlPercent ?? undefined,
+				commission: tradeData.commission ?? undefined,
+				grossPnl: tradeData.grossPnl ?? undefined,
 				notes: tradeData.notes ?? undefined,
 			});
 			importedTrades++;

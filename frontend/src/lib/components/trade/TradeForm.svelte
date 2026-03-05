@@ -38,6 +38,9 @@
 	let pnlPercent = $state<number | string>(trade?.pnlPercent ?? '');
 	// True after the user manually types in the P&L % field; cleared when they type in P&L Amount.
 	let pnlPercentManual = $state(false);
+	let showCommission = $state(trade?.commission != null || trade?.grossPnl != null);
+	let commission = $state<number | string>(trade?.commission ?? '');
+	let grossPnl = $state<number | string>(trade?.grossPnl ?? '');
 	let status = $state(trade?.status ?? 'open');
 	let notes = $state(trade?.notes ?? '');
 
@@ -96,6 +99,22 @@
 		pnlPercent = Math.round(((amount / startingCapital) * 100) * 100) / 100;
 	}
 
+	function calcPnlFromCommission() {
+		const g = Number(grossPnl);
+		const c = Number(commission);
+		if (!isNaN(g) && grossPnl !== '' && !isNaN(c) && commission !== '') {
+			pnlAmount = Math.round((g - c) * 100) / 100;
+			calcPnlPercentFromAmount(pnlAmount);
+		}
+	}
+
+	function calcPnlPercentFromAmount(amount: number) {
+		pnlPercentManual = false;
+		if (startingCapital <= 0) return;
+		if (isNaN(amount)) return;
+		pnlPercent = Math.round(((amount / startingCapital) * 100) * 100) / 100;
+	}
+
 	function isEmptyHtml(html: string): boolean {
 		if (!html) return true;
 		const stripped = html.replace(/<[^>]*>/g, '').trim();
@@ -134,6 +153,20 @@
 			newErrors.exitPrice = 'Required when closing a trade';
 		}
 
+		if (showCommission) {
+			const hasCommission = commission !== '' && !isNaN(Number(commission));
+			const hasGrossPnl = grossPnl !== '' && !isNaN(Number(grossPnl));
+			if (hasCommission && !hasGrossPnl) {
+				newErrors.grossPnl = 'Required when commission is set';
+			}
+			if (hasGrossPnl && !hasCommission) {
+				newErrors.commission = 'Required when Gross P&L is set';
+			}
+			if (hasCommission && Number(commission) < 0) {
+				newErrors.commission = 'Must be 0 or greater';
+			}
+		}
+
 		errors = newErrors;
 		return Object.keys(newErrors).length === 0;
 	}
@@ -157,6 +190,8 @@
 				status,
 				pnlAmount: pnlAmount !== '' ? Number(pnlAmount) : undefined,
 				pnlPercent: pnlPercent !== '' ? Number(pnlPercent) : undefined,
+				commission: showCommission && commission !== '' ? Number(commission) : undefined,
+				grossPnl: showCommission && grossPnl !== '' ? Number(grossPnl) : undefined,
 				notes: isEmptyHtml(notes) ? undefined : notes,
 			});
 		} finally {
@@ -206,6 +241,20 @@
 		<Input type="number" label="P&L Amount ($)" bind:value={pnlAmount} step="any" placeholder="Optional" oninput={calcPnlPercent} />
 		<Input type="number" label="P&L (%)" bind:value={pnlPercent} step="any" placeholder="Auto from P&L ÷ capital" oninput={() => { pnlPercentManual = true; }} />
 	</div>
+
+	<div class="commission-toggle">
+		<label class="toggle-label">
+			<input type="checkbox" bind:checked={showCommission} class="toggle-checkbox" />
+			<span class="toggle-text">Commission fees</span>
+		</label>
+	</div>
+
+	{#if showCommission}
+		<div class="form-grid">
+			<Input type="number" label="Commission ($)" bind:value={commission} step="any" error={errors.commission} placeholder="0.00" oninput={calcPnlFromCommission} min={0} />
+			<Input type="number" label="Gross P&L ($)" bind:value={grossPnl} step="any" error={errors.grossPnl} placeholder="P&L before fees" oninput={calcPnlFromCommission} />
+		</div>
+	{/if}
 
 	<div class="notes-field">
 		<span class="notes-label">Notes</span>
@@ -273,6 +322,31 @@
 		margin: 0;
 		font-size: 0.875rem;
 		color: #92400e;
+	}
+
+	.commission-toggle {
+		display: flex;
+		align-items: center;
+	}
+
+	.toggle-label {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		cursor: pointer;
+		font-size: 0.875rem;
+		color: var(--color-text, #374151);
+	}
+
+	.toggle-checkbox {
+		width: 1rem;
+		height: 1rem;
+		accent-color: var(--color-primary, #2563eb);
+		cursor: pointer;
+	}
+
+	.toggle-text {
+		font-weight: 500;
 	}
 
 	.notes-label {

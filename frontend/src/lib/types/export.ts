@@ -31,6 +31,8 @@ export interface ExportTrade {
 	rrRatio: number;
 	pnlAmount: number | null;
 	pnlPercent: number | null;
+	commission: number | null;
+	grossPnl: number | null;
 	notes: string | null;
 	images: ExportImage[];
 }

@@ -238,7 +238,7 @@
 				<span class="stat-label">Total Trades</span>
 				<svg class="stat-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
 			</div>
-			<div class="stat-value">{tradesStore.trades.length}</div>
+			<div class="stat-value">{tradesStore.totalDocs}</div>
 			<div class="stat-sub">all time</div>
 		</div>
 	</div>

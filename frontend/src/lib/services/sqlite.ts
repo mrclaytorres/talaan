@@ -167,6 +167,9 @@ export class SQLiteAdapter implements DataService {
 		// Create tables
 		await this.db.execute(CREATE_TABLES_SQL);
 
+		// Add commission columns (safe to re-run — errors are caught)
+		await this.migrateCommissionColumns();
+
 		// Seed tickers on first run
 		await this.seedTickers();
 
@@ -221,6 +224,19 @@ export class SQLiteAdapter implements DataService {
 		}
 	}
 
+	private async migrateCommissionColumns(): Promise<void> {
+		try {
+			await this.db.execute('ALTER TABLE trade_positions ADD COLUMN commission REAL;');
+		} catch {
+			// Column already exists
+		}
+		try {
+			await this.db.execute('ALTER TABLE trade_positions ADD COLUMN gross_pnl REAL;');
+		} catch {
+			// Column already exists
+		}
+	}
+
 	// --- Row mapping helpers ---
 
 	private mapRowToUser(row: Record<string, unknown>): User {
@@ -265,6 +281,8 @@ export class SQLiteAdapter implements DataService {
 			rrRatio: (row.rr_ratio as number) ?? null,
 			pnlAmount: (row.pnl_amount as number) ?? null,
 			pnlPercent: (row.pnl_percent as number) ?? null,
+			commission: (row.commission as number) ?? null,
+			grossPnl: (row.gross_pnl as number) ?? null,
 			notes: (row.notes as string) ?? null,
 			createdAt: row.created_at as string,
 			updatedAt: row.updated_at as string,
@@ -562,8 +580,8 @@ export class SQLiteAdapter implements DataService {
 		await this.initialize();
 		const now = new Date().toISOString();
 		const result = await this.db.run(
-			`INSERT INTO trade_positions (account_id, date, ticker_symbol, direction, entry_price, stop_loss, take_profit, position_size, exit_price, status, rr_ratio, pnl_amount, pnl_percent, notes, created_at, updated_at)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+			`INSERT INTO trade_positions (account_id, date, ticker_symbol, direction, entry_price, stop_loss, take_profit, position_size, exit_price, status, rr_ratio, pnl_amount, pnl_percent, commission, gross_pnl, notes, created_at, updated_at)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
 			[
 				Number(data.account),
 				data.date,
@@ -578,6 +596,8 @@ export class SQLiteAdapter implements DataService {
 				data.rrRatio ?? null,
 				data.pnlAmount ?? null,
 				data.pnlPercent ?? null,
+				data.commission ?? null,
+				data.grossPnl ?? null,
 				data.notes ?? null,
 				now,
 				now,
@@ -614,6 +634,8 @@ export class SQLiteAdapter implements DataService {
 			rrRatio: 'rr_ratio',
 			pnlAmount: 'pnl_amount',
 			pnlPercent: 'pnl_percent',
+			commission: 'commission',
+			grossPnl: 'gross_pnl',
 			notes: 'notes',
 		};
 
