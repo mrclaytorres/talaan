@@ -23,7 +23,7 @@
 			'class', 'style',
 			'allowfullscreen', 'frameborder', 'allow',
 		],
-		ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i,
+		ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto|file|local-image|capacitor):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i,
 		ADD_ATTR: ['target'],
 	};
 

@@ -16,11 +16,11 @@
 	let lightboxIndex = $state<number | null>(null);
 
 	function fullSrc(image: TradeImage): string {
-		return image.sizes?.medium?.url ?? image.url ?? image.filePath ?? '';
+		return image.url ?? image.sizes?.medium?.url ?? image.filePath ?? '';
 	}
 
 	function thumbSrc(image: TradeImage): string {
-		return image.sizes?.thumbnail?.url ?? image.url ?? image.filePath ?? '';
+		return image.sizes?.thumbnail?.url ?? image.sizes?.medium?.url ?? image.url ?? image.filePath ?? '';
 	}
 
 	function openLightbox(index: number) {
@@ -277,15 +277,13 @@
 
 	.lightbox-content {
 		position: relative;
-		max-width: 100%;
-		max-height: 100%;
 		display: flex;
 		align-items: center;
 		justify-content: center;
 	}
 
 	.lightbox-img {
-		max-width: min(90vw, 1200px);
+		max-width: min(80vw, 1200px);
 		max-height: 85vh;
 		object-fit: contain;
 		border-radius: 0.5rem;

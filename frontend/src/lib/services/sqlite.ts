@@ -298,7 +298,7 @@ export class SQLiteAdapter implements DataService {
 			mimeType: row.mime_type as string,
 			filePath,
 			sortOrder: row.sort_order as number,
-			url: this._isElectron ? `file://${filePath}` : Capacitor.convertFileSrc(filePath),
+			url: this._isElectron ? `local-image://${encodeURIComponent(filePath)}` : Capacitor.convertFileSrc(filePath),
 			createdAt: row.created_at as string,
 		};
 	}
