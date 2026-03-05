@@ -293,39 +293,86 @@ pnpm run dev:electron
 
 This runs `vite build` + `cap sync` + opens the Electron window with DevTools enabled.
 
-### Building Distributable Packages
+## Building Distributable Packages
 
 #### Linux (AppImage + .deb)
+
+**Step 1.** Navigate to the frontend directory and install dependencies:
+
+```bash
+cd frontend
+pnpm install
+```
+
+**Step 2.** Add the Electron platform (first time only):
+
+```bash
+npx cap add @capacitor-community/electron
+```
+
+**Step 3.** Install Electron-specific dependencies (first time, or after adding new packages):
+
+```bash
+cd electron
+npm install
+cd ..
+```
+
+**Step 4.** Build the SvelteKit web app and sync to Electron:
+
+```bash
+pnpm run build:electron
+```
+
+> **Important:** Always use `build:electron` instead of running `build` and `cap sync` separately. The `cap sync` command resets `electron-plugins.js` to a format that breaks SQLite plugin registration. The `build:electron` script automatically runs `scripts/fix-electron-plugins.js` after syncing to restore the correct plugin configuration.
+
+**Step 5.** Build the distributable packages:
+
+```bash
+pnpm run dist:electron
+```
+
+**Step 6.** Output files will be in:
+
+```
+frontend/electron/dist/
+├── Talaan-<version>.AppImage    # Portable — no install needed
+└── talaan_<version>_amd64.deb   # Debian/Ubuntu package
+```
+
+**To run the AppImage:**
+
+```bash
+chmod +x frontend/electron/dist/Talaan-<version>.AppImage
+./frontend/electron/dist/Talaan-<version>.AppImage
+```
+
+**To install the .deb:**
+
+```bash
+sudo dpkg -i frontend/electron/dist/talaan_<version>_amd64.deb
+```
+
+##### Manual build (alternative)
+
+If you need to run steps individually instead of using `build:electron`:
 
 ```bash
 cd frontend
 
-# 1. Build SvelteKit, sync to Electron, fix plugins (all-in-one)
-pnpm run build:electron
+# 1. Build the SvelteKit static SPA
+pnpm build
 
-# 2. Build the distributable packages
-pnpm run dist:electron
-```
+# 2. Sync web assets to Electron
+npx cap sync @capacitor-community/electron
 
-Output files:
+# 3. Fix the SQLite plugin registration (REQUIRED after every cap sync)
+node scripts/fix-electron-plugins.js
 
-```
-frontend/electron/dist/
-├── Talaan-1.0.0.AppImage    # Portable — no install needed
-└── talaan_1.0.0_amd64.deb   # Debian/Ubuntu package
-```
-
-To run the AppImage:
-
-```bash
-chmod +x Talaan-1.0.0.AppImage
-./Talaan-1.0.0.AppImage
-```
-
-To install the .deb:
-
-```bash
-sudo dpkg -i talaan_1.0.0_amd64.deb
+# 4. Build and package
+cd electron
+npm install
+npm run electron:make
 ```
 
 #### Windows (NSIS installer)
