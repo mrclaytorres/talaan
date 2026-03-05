@@ -1,7 +1,7 @@
 import type { CapacitorElectronConfig } from '@capacitor-community/electron';
 import { getCapacitorElectronConfig, setupElectronDeepLinking } from '@capacitor-community/electron';
 import type { MenuItemConstructorOptions } from 'electron';
-import { app, ipcMain, MenuItem } from 'electron';
+import { app, ipcMain, MenuItem, protocol, net } from 'electron';
 import electronIsDev from 'electron-is-dev';
 import unhandled from 'electron-unhandled';
 import { autoUpdater } from 'electron-updater';
@@ -39,10 +39,22 @@ if (electronIsDev) {
   setupReloadWatcher(myCapacitorApp);
 }
 
+// Register custom protocol for serving local images (must be before app.whenReady)
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'local-image', privileges: { bypassCSP: true, supportFetchAPI: true } },
+]);
+
 // Run Application
 (async () => {
   // Wait for electron app to be ready.
   await app.whenReady();
+
+  // Handle local-image:// protocol — serves files from absolute paths
+  protocol.handle('local-image', (request) => {
+    const filePath = decodeURIComponent(request.url.replace('local-image://', ''));
+    return net.fetch(`file://${filePath}`);
+  });
+
   // Security - Set Content-Security-Policy based on whether or not we are in dev mode.
   setupContentSecurityPolicy(myCapacitorApp.getCustomURLScheme());
   // Initialize our app, build windows, and load content.
