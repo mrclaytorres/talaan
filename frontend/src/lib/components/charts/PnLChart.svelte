@@ -1,22 +1,23 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { Chart, registerables } from 'chart.js';
-	import type { TradePosition } from '$lib/types/trade.js';
-	import { buildPnLTimeSeries, buildWinLossData } from '$lib/utils/chart-data.js';
+	import type { DailyPnLRow } from '$lib/services/types.js';
 	import { themeStore } from '$lib/stores/theme.svelte.js';
 
 	Chart.register(...registerables);
 
 	interface Props {
-		trades: TradePosition[];
-		dateRange?: { start: string; end: string };
+		dailyData: DailyPnLRow[];
 	}
 
-	let { trades, dateRange }: Props = $props();
+	let { dailyData }: Props = $props();
 
 	let canvas: HTMLCanvasElement;
 	let chart: Chart | null = null;
 	let mode = $state<'pnl' | 'winloss'>('pnl');
+
+	type TimePreset = 'daily' | 'weekly' | 'monthly' | 'yearly';
+	let timePreset = $state<TimePreset>('weekly');
 
 	function getThemeColors() {
 		const isDark = themeStore.current === 'dark';
@@ -30,16 +31,76 @@
 		};
 	}
 
+	/** Get ISO week Monday key (YYYY-Www) for a date string */
+	function getWeekKey(dateStr: string): string {
+		const d = new Date(dateStr + 'T12:00:00');
+		const day = d.getDay();
+		const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+		const monday = new Date(d);
+		monday.setDate(diff);
+		const month = monday.toLocaleString(undefined, { month: 'short' });
+		return `${month} ${monday.getDate()}`;
+	}
+
+	interface AggregatedPoint {
+		label: string;
+		amount: number;
+		wins: number;
+		losses: number;
+	}
+
+	function aggregateByPreset(data: DailyPnLRow[], preset: TimePreset): AggregatedPoint[] {
+		if (preset === 'daily') {
+			return data.map((d) => ({
+				label: d.date.slice(5),
+				amount: d.amount,
+				wins: d.wins,
+				losses: d.losses,
+			}));
+		}
+
+		const map = new Map<string, AggregatedPoint>();
+
+		for (const row of data) {
+			let key: string;
+			if (preset === 'weekly') {
+				key = getWeekKey(row.date);
+			} else if (preset === 'monthly') {
+				const dt = new Date(row.date + 'T12:00:00');
+				key = `${dt.toLocaleString(undefined, { month: 'short' })} ${dt.getFullYear().toString().slice(2)}`;
+			} else {
+				key = row.date.slice(0, 4);
+			}
+
+			const existing = map.get(key);
+			if (existing) {
+				existing.amount += row.amount;
+				existing.wins += row.wins;
+				existing.losses += row.losses;
+			} else {
+				map.set(key, { label: key, amount: row.amount, wins: row.wins, losses: row.losses });
+			}
+		}
+
+		return [...map.values()];
+	}
+
 	function renderChart() {
 		if (!canvas) return;
 		if (chart) chart.destroy();
 
 		const colors = getThemeColors();
+		const aggregated = aggregateByPreset(dailyData, timePreset);
 
 		if (mode === 'pnl') {
-			const data = buildPnLTimeSeries(trades, dateRange);
-			const labels = data.map((d) => d.date.slice(5));
-			const values = data.map((d) => d.cumulative);
+			let cumulative = 0;
+			const labels: string[] = [];
+			const values: number[] = [];
+			for (const point of aggregated) {
+				cumulative += point.amount;
+				labels.push(point.label);
+				values.push(cumulative);
+			}
 
 			chart = new Chart(canvas, {
 				type: 'line',
@@ -77,7 +138,7 @@
 							borderWidth: 1,
 							padding: 10,
 							callbacks: {
-								label: (ctx) => `$${ctx.parsed.y.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+								label: (ctx) => `$${ctx.parsed.y?.toLocaleString(undefined, { minimumFractionDigits: 2 }) ?? '0.00'}`,
 							},
 						},
 					},
@@ -98,8 +159,7 @@
 				},
 			});
 		} else {
-			const data = buildWinLossData(trades, dateRange);
-			const labels = data.map((d) => d.label);
+			const labels = aggregated.map((d) => d.label);
 
 			chart = new Chart(canvas, {
 				type: 'bar',
@@ -108,13 +168,13 @@
 					datasets: [
 						{
 							label: 'Wins',
-							data: data.map((d) => d.wins),
+							data: aggregated.map((d) => d.wins),
 							backgroundColor: colors.positive,
 							borderRadius: 4,
 						},
 						{
 							label: 'Losses',
-							data: data.map((d) => d.losses),
+							data: aggregated.map((d) => d.losses),
 							backgroundColor: colors.negative,
 							borderRadius: 4,
 						},
@@ -165,9 +225,9 @@
 	});
 
 	$effect(() => {
-		// Re-render when trades, mode, or theme changes
-		void trades;
+		void dailyData;
 		void mode;
+		void timePreset;
 		void themeStore.current;
 		renderChart();
 	});
@@ -176,9 +236,17 @@
 <div class="chart-container">
 	<div class="chart-header">
 		<span class="chart-title">{mode === 'pnl' ? 'P&L Over Time' : 'Wins vs Losses'}</span>
-		<div class="chart-toggle">
-			<button class="toggle-btn" class:active={mode === 'pnl'} onclick={() => (mode = 'pnl')}>P&L</button>
-			<button class="toggle-btn" class:active={mode === 'winloss'} onclick={() => (mode = 'winloss')}>W/L</button>
+		<div class="chart-controls">
+			<div class="chart-toggle">
+				<button class="toggle-btn" class:active={timePreset === 'daily'} onclick={() => (timePreset = 'daily')}>D</button>
+				<button class="toggle-btn" class:active={timePreset === 'weekly'} onclick={() => (timePreset = 'weekly')}>W</button>
+				<button class="toggle-btn" class:active={timePreset === 'monthly'} onclick={() => (timePreset = 'monthly')}>M</button>
+				<button class="toggle-btn" class:active={timePreset === 'yearly'} onclick={() => (timePreset = 'yearly')}>Y</button>
+			</div>
+			<div class="chart-toggle">
+				<button class="toggle-btn" class:active={mode === 'pnl'} onclick={() => (mode = 'pnl')}>P&L</button>
+				<button class="toggle-btn" class:active={mode === 'winloss'} onclick={() => (mode = 'winloss')}>W/L</button>
+			</div>
 		</div>
 	</div>
 	<div class="chart-body">
@@ -199,11 +267,18 @@
 		align-items: center;
 		justify-content: space-between;
 		margin-bottom: 12px;
+		flex-wrap: wrap;
+		gap: 8px;
 	}
 
 	.chart-title {
 		font-size: 14px;
 		font-weight: 600;
+	}
+
+	.chart-controls {
+		display: flex;
+		gap: 6px;
 	}
 
 	.chart-toggle {

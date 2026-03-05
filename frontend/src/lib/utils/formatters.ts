@@ -65,14 +65,11 @@ export function formatRRRatio(ratio: number | null): string {
 }
 
 /**
- * Format a price with appropriate precision.
+ * Format a price preserving the exact stored value.
+ * No artificial rounding — displays whatever precision the user entered.
  */
 export function formatPrice(price: number): string {
-	if (price >= 1) {
-		return price.toFixed(2);
-	}
-	// For sub-dollar prices (crypto, forex), use more precision
-	return price.toPrecision(6);
+	return price.toString();
 }
 
 /**

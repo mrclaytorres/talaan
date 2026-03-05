@@ -95,6 +95,15 @@ export const TradePositions: CollectionConfig = {
 			type: 'number',
 		},
 		{
+			name: 'commission',
+			type: 'number',
+			min: 0,
+		},
+		{
+			name: 'grossPnl',
+			type: 'number',
+		},
+		{
 			name: 'notes',
 			type: 'textarea',
 		},

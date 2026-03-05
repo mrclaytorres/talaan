@@ -21,7 +21,7 @@
 	});
 
 	function handleClick() {
-		if (pnl && onclick) {
+		if (isCurrentMonth && onclick) {
 			onclick(date);
 		}
 	}
@@ -31,16 +31,19 @@
 	class="day-cell {cellClass()}"
 	class:dimmed={!isCurrentMonth}
 	class:has-trades={pnl !== null && pnl.tradeCount > 0}
+	class:empty-day={isCurrentMonth && (!pnl || pnl.tradeCount === 0)}
 	onclick={handleClick}
-	disabled={!pnl || pnl.tradeCount === 0}
+	disabled={!isCurrentMonth}
 	type="button"
-	aria-label="{date}: {pnl ? formatCurrency(pnl.amount) : 'No trades'}"
+	aria-label="{date}: {pnl ? formatCurrency(pnl.amount) : 'No trades — click to add'}"
 >
 	<span class="day-number">{dayNumber}</span>
 	{#if pnl && isCurrentMonth}
 		<span class="day-pnl">{formatCurrency(pnl.amount)}</span>
 		<span class="day-percent">{formatPercent(pnl.percent)}</span>
 		<span class="day-count">{pnl.tradeCount} trade{pnl.tradeCount !== 1 ? 's' : ''}</span>
+	{:else if isCurrentMonth}
+		<span class="add-hint">+</span>
 	{/if}
 </button>
 
@@ -66,6 +69,27 @@
 
 	.day-cell.has-trades:hover {
 		opacity: 0.85;
+	}
+
+	.day-cell.empty-day {
+		cursor: pointer;
+	}
+
+	.day-cell.empty-day:hover {
+		background: var(--color-hover, #f3f4f6);
+		border-color: var(--color-primary, #2563eb);
+	}
+
+	.add-hint {
+		font-size: 1rem;
+		color: var(--color-border, #d1d5db);
+		margin-top: auto;
+		margin-bottom: auto;
+		line-height: 1;
+	}
+
+	.day-cell.empty-day:hover .add-hint {
+		color: var(--color-primary, #2563eb);
 	}
 
 	.day-cell.positive {

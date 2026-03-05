@@ -16,6 +16,8 @@ export interface TradePosition {
 	rrRatio: number | null;
 	pnlAmount: number | null;
 	pnlPercent: number | null;
+	commission: number | null;
+	grossPnl: number | null;
 	notes: string | null;
 	images?: TradeImage[];
 	createdAt: string;
@@ -36,6 +38,8 @@ export interface CreateTradeData {
 	rrRatio?: number;
 	pnlAmount?: number;
 	pnlPercent?: number;
+	commission?: number;
+	grossPnl?: number;
 	notes?: string;
 }
 
@@ -52,6 +56,8 @@ export interface UpdateTradeData {
 	rrRatio?: number | null;
 	pnlAmount?: number | null;
 	pnlPercent?: number | null;
+	commission?: number | null;
+	grossPnl?: number | null;
 	notes?: string | null;
 }
 

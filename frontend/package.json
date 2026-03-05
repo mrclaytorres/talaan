@@ -1,7 +1,7 @@
 {
 	"name": "frontend",
 	"private": true,
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev",
@@ -19,7 +19,10 @@
 		"test:coverage": "vitest run --coverage",
 		"build:mobile": "vite build && npx cap sync",
 		"build:ios": "vite build && npx cap sync ios",
-		"build:android": "vite build && npx cap sync android"
+		"build:android": "vite build && npx cap sync android",
+		"build:electron": "vite build && npx cap sync @capacitor-community/electron && node scripts/fix-electron-plugins.js",
+		"dev:electron": "pnpm run build:electron && npx cap open @capacitor-community/electron",
+		"dist:electron": "pnpm run build:electron && cd electron && npm run electron:build-linux"
 	},
 	"devDependencies": {
 		"@playwright/test": "^1.58.2",
@@ -43,6 +46,9 @@
 		"vitest": "^4.0.18"
 	},
 	"dependencies": {
+		"@capacitor-community/electron": "^5.0.1",
+		"@capacitor-community/sqlite": "^8.0.0",
+		"@capacitor/android": "^8.1.0",
 		"@capacitor/camera": "^8.0.1",
 		"@capacitor/cli": "^8.1.0",
 		"@capacitor/clipboard": "^8.0.1",

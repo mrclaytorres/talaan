@@ -1,17 +1,16 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { Chart, registerables } from 'chart.js';
-	import type { TradePosition } from '$lib/types/trade.js';
-	import { buildTickerDistribution } from '$lib/utils/chart-data.js';
+	import type { TickerDistributionRow } from '$lib/services/types.js';
 	import { themeStore } from '$lib/stores/theme.svelte.js';
 
 	Chart.register(...registerables);
 
 	interface Props {
-		trades: TradePosition[];
+		distributionData: TickerDistributionRow[];
 	}
 
-	let { trades }: Props = $props();
+	let { distributionData }: Props = $props();
 
 	let canvas: HTMLCanvasElement;
 	let chart: Chart | null = null;
@@ -32,10 +31,10 @@
 		if (!canvas) return;
 		if (chart) chart.destroy();
 
-		const data = buildTickerDistribution(trades, 8);
 		const isDark = themeStore.current === 'dark';
+		const legendColor = isDark ? '#e4e4e7' : '#52525b';
 
-		if (data.length === 0) {
+		if (distributionData.length === 0) {
 			chart = null;
 			return;
 		}
@@ -43,11 +42,11 @@
 		chart = new Chart(canvas, {
 			type: 'doughnut',
 			data: {
-				labels: data.map((d) => d.ticker),
+				labels: distributionData.map((d) => d.ticker),
 				datasets: [
 					{
-						data: data.map((d) => d.count),
-						backgroundColor: data.map((_, i) => PALETTE[i % PALETTE.length]),
+						data: distributionData.map((d) => d.count),
+						backgroundColor: distributionData.map((_: TickerDistributionRow, i: number) => PALETTE[i % PALETTE.length]),
 						borderColor: isDark ? '#18181b' : '#ffffff',
 						borderWidth: 2,
 						hoverOffset: 6,
@@ -62,7 +61,7 @@
 					legend: {
 						position: 'right',
 						labels: {
-							color: isDark ? '#a1a1aa' : '#52525b',
+							color: legendColor,
 							font: { size: 11, family: 'Inter' },
 							padding: 10,
 							usePointStyle: true,
@@ -70,8 +69,9 @@
 							generateLabels: (chart) => {
 								const dataset = chart.data.datasets[0];
 								return (chart.data.labels as string[]).map((label, i) => ({
-									text: `${label} — ${dataset.data[i]}`,
+									text: `${label} \u2014 ${dataset.data[i]}`,
 									fillStyle: (dataset.backgroundColor as string[])[i],
+									fontColor: legendColor,
 									strokeStyle: 'transparent',
 									hidden: false,
 									index: i,
@@ -109,7 +109,7 @@
 	});
 
 	$effect(() => {
-		void trades;
+		void distributionData;
 		void themeStore.current;
 		renderChart();
 	});
@@ -118,10 +118,10 @@
 <div class="chart-container">
 	<div class="chart-header">
 		<span class="chart-title">Ticker Distribution</span>
-		<span class="chart-sub">{trades.length} total trades</span>
+		<span class="chart-sub">{distributionData.reduce((sum, d) => sum + d.count, 0)} total trades</span>
 	</div>
 	<div class="chart-body">
-		{#if trades.length === 0}
+		{#if distributionData.length === 0}
 			<div class="empty">No trades to display</div>
 		{:else}
 			<canvas bind:this={canvas}></canvas>

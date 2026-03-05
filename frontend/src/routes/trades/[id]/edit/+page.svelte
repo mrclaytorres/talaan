@@ -4,6 +4,7 @@
 	import { onMount } from 'svelte';
 	import { tradesStore } from '$lib/stores/trades.svelte.js';
 	import { accountsStore } from '$lib/stores/accounts.svelte.js';
+	import { getDataService } from '$lib/services/index.js';
 	import type { CreateTradeData, TradeImage } from '$lib/types/index.js';
 	import TradeForm from '$lib/components/trade/TradeForm.svelte';
 	import ImageAttachment from '$lib/components/trade/ImageAttachment.svelte';
@@ -22,8 +23,10 @@
 
 	onMount(async () => {
 		await tradesStore.loadTrade(tradeId);
-		if (tradesStore.currentTrade?.images) {
-			images = tradesStore.currentTrade.images;
+		try {
+			images = await getDataService().getTradeImages(tradeId);
+		} catch {
+			// non-critical
 		}
 	});
 

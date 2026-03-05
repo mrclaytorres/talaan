@@ -12,6 +12,7 @@ import { Tickers } from './collections/Tickers';
 import { exportJSON } from './endpoints/export-json';
 import { exportCSV } from './endpoints/export-csv';
 import { importJSON } from './endpoints/import-json';
+import { dashboardStats } from './endpoints/dashboard-stats';
 
 const filename = fileURLToPath(import.meta.url);
 const dirname = path.dirname(filename);
@@ -39,6 +40,11 @@ export default buildConfig({
       path: '/import/json',
       method: 'post',
       handler: importJSON,
+    },
+    {
+      path: '/dashboard/stats',
+      method: 'get',
+      handler: dashboardStats,
     },
   ],
   db: postgresAdapter({

@@ -47,7 +47,7 @@
 - [x] T012 [P] Implement validator utilities in `frontend/src/lib/utils/validators.ts` — `validatePassword(password): { valid: boolean, errors: string[] }` (min 8 chars, 1 uppercase, 1 number, 1 special), `validatePrice(value): boolean` (> 0), `validatePriceRelationship(direction, entry, stopLoss, takeProfit): { valid: boolean, warnings: string[] }`, `validateMimeType(type): boolean`
 - [x] T013 Define DataService interface in `frontend/src/lib/services/types.ts` — TypeScript interface `DataService` with methods: `getUser()`, `createUser(data)`, `updateUser(id, data)`, `getAccounts()`, `createAccount(data)`, `updateAccount(id, data)`, `deleteAccount(id)`, `getTrades(filters?)`, `getTradesByDateRange(start, end, accountId?)`, `createTrade(data)`, `updateTrade(id, data)`, `deleteTrade(id)`, `getTradeImages(tradeId)`, `uploadImage(tradeId, file)`, `deleteImage(id)`, `searchTickers(query)`, `getRecentTickers(limit)`. All return Promises with typed results
 - [x] T014 Implement PayloadAdapter in `frontend/src/lib/services/payload.ts` — class implementing DataService interface. All methods make HTTP fetch calls to Payload REST API at `PUBLIC_API_URL` (e.g., `GET /api/trade-positions?where[account][equals]={id}`). Handle pagination, error responses, and file uploads (multipart for images). Use query patterns from contracts/payload-collections.md
-- [x] T015 Implement SQLiteAdapter in `frontend/src/lib/services/sqlite.ts` — class implementing DataService interface using `@capacitor-community/sqlite`. Initialize database with schema matching data-model.md (CREATE TABLE statements for users, trading_accounts, trade_positions, trade_images, tickers). Implement all DataService methods with SQL queries. Store images via `@capacitor/filesystem` and reference paths in trade_images table
+- [x] T015 Implement SQLiteAdapter in `frontend/src/lib/services/sqlite.ts` — class implementing DataService interface using `@capacitor-community/sqlite`. Initialize database with schema matching data-model.md (CREATE TABLE statements for users, trading_accounts, trade_positions, trade_images, tickers). Implement all DataService methods with SQL queries. Store images via `@capacitor/filesystem` and reference paths in trade_images table. _(Initially a stub; fully implemented in Phase 18 T104)_
 - [x] T016 Implement DataService factory in `frontend/src/lib/services/index.ts` — export `createDataService(): DataService` that checks `Capacitor.isNativePlatform()` and returns `SQLiteAdapter` on mobile or `PayloadAdapter` on web. Export singleton `dataService` initialized on app load
 - [x] T017 [P] Create design system UI components in `frontend/src/lib/components/ui/` — implement `Button.svelte` (primary/secondary/danger variants, loading state), `Input.svelte` (text/number/date/password types, label, error message, validation), `Modal.svelte` (overlay, title, body slot, confirm/cancel actions), `Select.svelte` (dropdown with options), `Badge.svelte` (colored label), `LoadingSpinner.svelte`, `EmptyState.svelte` (icon, message, action slot), `Toast.svelte` (success/error/warning notifications). All components keyboard-accessible per constitution
 - [x] T018 Implement root layout in `frontend/src/routes/+layout.svelte` — navigation sidebar/bottom bar (responsive: sidebar on desktop, bottom tabs on mobile), route links for Dashboard, Trades, Calendar, Accounts, Settings. Auth guard: check if user profile exists via dataService, redirect to `/setup` if not. Show password lock screen if password is set and session not authenticated
@@ -305,6 +305,173 @@
 
 ---
 
+## Phase 18: SQLiteAdapter Implementation & Android APK Build
+
+**Purpose**: Implement the full SQLiteAdapter for offline mobile use and build a debug Android APK.
+
+**Independent Test**: Install APK on Android device → complete setup flow → create profile and account → add/edit/close trades with P&L → verify calendar shows daily P&L → verify ticker search works → verify image attachments save and display → kill app and reopen → verify all data persists in SQLite.
+
+### Implementation for SQLiteAdapter & Android Build
+
+- [x] T102 [P] Install `@capacitor-community/sqlite` dependency in `frontend/` — added `@capacitor-community/sqlite@8.0.0` to dependencies via `pnpm add`
+- [x] T103 [P] Update `frontend/capacitor.config.ts` — renamed `appName` from "Trading Journal" to "Talaan", added `CapacitorSQLite` plugin config with `iosDatabaseLocation`, `iosIsEncryption: false`, `androidIsEncryption: false`, `electronIsEncryption: false`
+- [x] T104 Implement full SQLiteAdapter in `frontend/src/lib/services/sqlite.ts` — complete rewrite of stub. 5-table schema (`users`, `trading_accounts`, `trade_positions`, `trade_images`, `tickers`) with foreign keys and cascading deletes. `initialize()` creates SQLite connection via `SQLiteConnection`/`CapacitorSQLite`, enables foreign keys, creates tables (IF NOT EXISTS), seeds tickers from `/data/tickers.json` on first run, creates image directory via `@capacitor/filesystem`. 5 private row mapping helpers (snake_case → camelCase, all IDs as strings). All 18 DataService methods with parameterized SQL: User (3), Accounts (4), Trades (6), Images (3), Tickers (2). Key behaviors match PayloadAdapter: ID integer↔string conversion, `updateTrade` strips account field, `deleteTrade`/`deleteAccount` delete image files before DB rows, `getTrades` computes full PaginatedResult, `getTradesByDateRange` returns closed trades only, image URLs use `Capacitor.convertFileSrc()` for WebView compatibility
+- [x] T105 Wire SQLiteAdapter into DataService factory in `frontend/src/lib/services/index.ts` — Proxy-based lazy dynamic import pattern. When `isNative` is true: `import('./sqlite.js')` dynamically, return a Proxy that awaits the import and forwards method calls. Avoids bundling `@capacitor-community/sqlite` in web build (tree-shaking). No changes to any call sites — all stores/components continue using synchronous `getDataService()`
+- [x] T106 [P] Update `frontend/vitest.config.ts` — removed `src/lib/services/sqlite.ts` from coverage exclude list so SQLiteAdapter is now included in coverage reporting
+- [x] T107 [P] Create SQLiteAdapter unit tests in `frontend/tests/unit/sqlite-adapter.test.ts` — 29 tests covering: initialization (connection creation, table creation, ticker seeding, idempotent init, existing connection retrieval), all 18 methods (row mapping, pagination math, ID string conversion, filter building, image file cleanup, dynamic SET clauses, account field stripping), error resilience (filesystem delete failures). Mocks `@capacitor-community/sqlite`, `@capacitor/filesystem`, `@capacitor/core`
+- [x] T108 [P] Create DataService factory unit tests in `frontend/tests/unit/data-service-factory.test.ts` — 5 tests: returns PayloadAdapter on web, uses `__PUBLIC_API_URL__` when available, returns Proxy-based adapter on native, singleton pattern, fallback to origin-based API URL
+- [x] T109 Install `@capacitor/android` and generate Android project — `pnpm add @capacitor/android@8.1.0`, `npx cap add android`, `npx cap sync android`. Added foojay toolchain resolver to `android/settings.gradle` for JDK 21 auto-provisioning. Downloaded Temurin JDK 21 to `~/.jdks/` (required by Capacitor 8.x plugins)
+- [x] T110 Build debug Android APK — `JAVA_HOME=~/.jdks/jdk-21.0.6+7 ./gradlew assembleDebug`. APK output at `frontend/android/app/build/outputs/apk/debug/app-debug.apk` (28MB). Build requires JDK 21 (JDK 17 insufficient for `@capacitor/filesystem` Kotlin source level)
+
+**Verification results**:
+- `pnpm test:unit` — all 114 tests pass (80 existing + 29 SQLiteAdapter + 5 factory)
+- `pnpm check` — zero new errors (1 pre-existing error in `PnLChart.svelte:80`)
+- `pnpm build` — SvelteKit builds successfully
+- `npx cap sync android && JAVA_HOME=~/.jdks/jdk-21.0.6+7 cd android && ./gradlew assembleDebug` — APK builds without errors
+
+**Checkpoint**: SQLiteAdapter fully implemented with all 18 methods. DataService factory wires native/web adapters via Proxy pattern. Android debug APK built and ready for device testing.
+
+---
+
+## Phase 19: Mobile Polish & Build Improvements
+
+**Purpose**: Fix mobile-specific UX bugs, improve Android build configuration, add developer branding, and polish the mobile experience.
+
+**Independent Test**: Build APK → install on device → verify: app icon shows Talaan shield logo, content doesn't overlap system status bar, dark/light theme toggle works in bottom nav, import backup immediately updates all data (no relaunch needed), trades table is scrollable on small screens, account switcher is accessible from dashboard, settings shows developer info and Buy Me a Coffee link, APK filename includes version number.
+
+### Implementation for Mobile Polish & Build Improvements
+
+- [x] T111 [P] Add dark/light theme toggle to mobile bottom nav in `frontend/src/routes/+layout.svelte` — theme toggle was only in the desktop top navbar (hidden on mobile via CSS). Added a "Theme" button with sun/moon SVG icons to the mobile `<nav class="bottom-bar">` alongside Dashboard, Accounts, and Settings links
+
+- [x] T112 Fix Import Backup button not working on mobile in `frontend/src/routes/settings/+page.svelte` — `<Button>` inside a `<label>` intercepted clicks in WebView, preventing the hidden file input from opening. Fixed by using `bind:this` on the file input and programmatically calling `.click()` from the Button's `onclick` handler. Removed unused `.import-label` CSS
+
+- [x] T113 [P] Remove outer calendar container borders for mobile in `frontend/src/lib/components/calendar/CalendarMonth.svelte` and `CalendarYear.svelte` — set `border: none` on `.calendar-month` and `.calendar-year` outer container divs for more breathing room on mobile. Day cells and week total cells retain their borders
+
+- [x] T114 Add Android and iOS build instructions to `README.md` — added detailed "Mobile (Capacitor)" section covering: prerequisites (JDK 21, Android SDK, Xcode/CocoaPods), first-time setup (`npx cap add`), debug vs release Android builds with step-by-step commands, signing keystore generation for release, debug vs release comparison table, iOS build steps with Xcode instructions
+
+- [x] T115 Add developer info and Buy Me a Coffee link to Settings in `frontend/src/routes/settings/+page.svelte` — added "Developed by ClayTorres" and a styled "Buy Me a Coffee" link (https://buymeacoffee.com/claytorres) to the App Info section. Added `.coffee-link` CSS with themed color and hover underline
+
+- [x] T116 Set up single source of truth for app version — `frontend/package.json` `"version"` field is now the single source:
+  - `frontend/vite.config.ts`: reads `package.json`, defines `__APP_VERSION__` global via Vite `define`
+  - `frontend/src/app.d.ts`: declares `__APP_VERSION__` as global `const` for TypeScript
+  - `frontend/src/routes/settings/+page.svelte`: uses `{__APP_VERSION__}` instead of hardcoded `"0.0.1"`
+  - `frontend/android/app/build.gradle`: reads version from `../../package.json` via Groovy `JsonSlurper`, sets `versionName` and `archivesBaseName = "talaan-v${appVersionName}"`
+  - APK filename now: `talaan-v0.0.1-debug.apk` / `talaan-v0.0.1-release.apk`
+
+- [x] T117 Generate and apply Talaan app icon for Android — converted `design-mockups/logo-option-4-shield-chart.svg` to PNG icons at all 5 density buckets (mdpi through xxxhdpi) using `sharp-cli`. Generated `ic_launcher_foreground.png` (adaptive icon foreground, 108-432px), `ic_launcher.png` and `ic_launcher_round.png` (48-192px). Updated `ic_launcher_background` color from default `#FFFFFF` to dark navy `#0f172a` matching the logo. Removed default Capacitor placeholder vector drawables (`drawable-v24/ic_launcher_foreground.xml`, `drawable/ic_launcher_background.xml`)
+
+- [x] T118 Fix status bar overlap on mobile in `frontend/src/app.html` and `frontend/src/routes/+layout.svelte` — added `viewport-fit=cover` to viewport meta tag so WebView extends into safe areas. Added `padding-top: calc(16px + env(safe-area-inset-top, 0px))` to `.main-content` so content sits below the system status bar
+
+- [x] T119 Fix import backup not refreshing application state in `frontend/src/routes/settings/+page.svelte` — `handleImportConfirm()` only reloaded `accountsStore` and `userStore` after import. Added `tradesStore.loadTrades()` call so the dashboard and trades table update immediately without requiring an app relaunch
+
+- [x] T120 Fix trades table cut off on mobile in `frontend/src/routes/dashboard/+page.svelte` — changed `.data-table` from `overflow: hidden` to `overflow-x: auto` with `-webkit-overflow-scrolling: touch` for horizontal scrollability. Added `white-space: nowrap` on `table` to prevent column squishing. Reduced cell padding on mobile (14px → 8px) so more columns fit without scrolling
+
+- [x] T121 Add mobile account switcher to dashboard in `frontend/src/routes/dashboard/+page.svelte` — `AccountSwitcher` component was only in the desktop top navbar (hidden on mobile). Added it at the top of the dashboard page inside a `.mobile-account-switcher` wrapper, visible only below 768px (`display: none` on desktop). Switching accounts on mobile reloads trades and calendar data via the existing `$effect` watcher
+
+**Checkpoint**: Mobile app fully polished — custom app icon, status bar handled, all stores refresh on import, trades table scrollable, account switching available on mobile dashboard, developer branding in settings, version managed from single source.
+
+---
+
+## Phase 20: Electron Desktop Support
+
+**Purpose**: Add standalone desktop application support via Electron, reusing the existing Capacitor + SQLite offline architecture. Includes IPC filesystem bridge to replace @capacitor/filesystem (no Electron support), app icon, window config, and Linux distribution builds.
+
+**Independent Test**: `pnpm run dev:electron` → Electron app opens with Talaan icon, 1200x800 window → setup flow works → add/edit/close trades → calendar shows P&L → ticker search works → image attachments save/display via IPC bridge → export/import works → data persists across restarts (SQLite in `~/.config/Talaan/`). `pnpm run dist:electron` produces AppImage/deb.
+
+### Implementation for Electron Desktop Support
+
+- [x] T122 [P] Install `@capacitor-community/electron` in `frontend/`, run `npx cap add @capacitor-community/electron` to scaffold `frontend/electron/` directory with main process, preload, assets, and its own `package.json`
+
+- [x] T123 [P] Install SQLite Electron dependencies in `frontend/electron/` — `better-sqlite3-multiple-ciphers`, `electron-json-storage`, `jszip`, `node-fetch@2.6.7`, `crypto-js` (runtime) and `@types/better-sqlite3`, `@types/electron-json-storage`, `@types/crypto-js` (dev). Pin `electron@25.8.4` and `electron-builder@24.6.4`, replace `electron-rebuild` with `@electron/rebuild`
+
+- [x] T124 [P] Add `skipLibCheck: true` to `frontend/electron/tsconfig.json` to avoid type conflicts between Electron and Capacitor type definitions
+
+- [x] T125 Register SQLite plugin in `frontend/electron/src/rt/electron-plugins.js` — require `@capacitor-community/sqlite/electron/dist/plugin.js` and export as `CapacitorCommunitySqlite`
+
+- [x] T126 Create platform utility `frontend/src/lib/utils/platform.ts` — `isElectron()` function that detects Electron renderer via `window.process.type === 'renderer'`
+
+- [x] T127 Add IPC filesystem handlers in `frontend/electron/src/index.ts` — `ipcMain.handle` for `fs:writeFile`, `fs:deleteFile`, `fs:mkdir`, `fs:getAppDataPath` using Node.js `fs` module with paths resolved relative to `app.getPath('userData')`
+
+- [x] T128 Expose `electronFS` bridge in `frontend/electron/src/preload.ts` via `contextBridge.exposeInMainWorld` — wraps IPC calls for `writeFile`, `deleteFile`, `mkdir`, `getAppDataPath`
+
+- [x] T129 Add `Window.electronFS` type declaration in `frontend/src/app.d.ts` — typed interface for the IPC bridge methods
+
+- [x] T130 Modify `frontend/src/lib/services/sqlite.ts` for Electron filesystem support — add `_isElectron` flag set in `initialize()`, conditional branches in `initialize()` (mkdir), `uploadImage()` (writeFile), `deleteAccount()`/`deleteTrade()`/`deleteImage()` (deleteFile), `mapRowToImage()` (file:// URL instead of `Capacitor.convertFileSrc()`)
+
+- [x] T131 [P] Configure Electron window in `frontend/electron/src/setup.ts` — default 1200x800, min 900x600, title "Talaan". Generate 256x256 PNG icon from `design-mockups/logo-option-4-shield-chart.svg` to `electron/assets/appIcon.png`
+
+- [x] T132 [P] Update `frontend/capacitor.config.ts` — add `electron` config block (`trayIconAndMenuEnabled: false`, `splashScreenEnabled: false`), add `electronLinuxLocation: 'Databases'` to CapacitorSQLite config
+
+- [x] T133 Create `frontend/scripts/fix-electron-plugins.js` — post-sync script that rewrites `electron-plugins.js` with SQLite registration (since `cap sync` resets it)
+
+- [x] T134 [P] Add build scripts to `frontend/package.json` — `build:electron`, `dev:electron`, `dist:electron`. Configure `electron-builder.config.json` with Linux targets (AppImage, deb), product name "Talaan"
+
+- [x] T135 [P] Update `README.md` with "Desktop (Electron)" section — build commands, data storage locations
+
+**Checkpoint**: Desktop Electron app fully functional — same offline-first SQLite experience as mobile, with IPC bridge replacing @capacitor/filesystem. Distributable as AppImage or deb.
+
+---
+
+## Phase 21: Dashboard SQL Query Optimization & Chart Improvements
+
+**Purpose**: Push dashboard aggregations to the data layer (SQL GROUP BY / backend endpoint), returning ~365 daily rows + a summary object instead of 10K full trade records. Add time-range presets to P&L chart and fix dark mode font colors.
+
+**Independent Test**: Load dashboard → stat cards show correct today P&L, fund standing, win rate → calendar cells show correct daily P&L → PnL Over Time chart default is Weekly, switch between D/W/M/Y → Ticker Distribution pie chart legend text is light on dark mode → click calendar day → DayDetail shows correct trades fetched on-demand → switch accounts → all data refreshes. Open new trade form → Ticker/Pair input dropdown text is light on dark mode.
+
+### Implementation for Dashboard SQL Query Optimization
+
+- [x] T136 Add aggregation types and DataService methods in `frontend/src/lib/services/types.ts` — add `DailyPnLRow`, `MonthlyPnLRow`, `DashboardSummary`, `TickerDistributionRow` interfaces. Add 5 new DataService methods: `getDailyPnL(accountId?)`, `getMonthlyPnL(accountId?)`, `getDashboardSummary(accountId?)`, `getTickerDistribution(accountId?, limit?)`, `getTradesForDate(date, accountId?)`
+
+- [x] T137 Implement SQLiteAdapter aggregation methods in `frontend/src/lib/services/sqlite.ts` — `getDailyPnL` uses `GROUP BY date(date)` returning daily rows with SUM(pnl_amount), wins/losses counts. `getMonthlyPnL` uses `GROUP BY strftime('%Y-%m', date)` with COUNT(DISTINCT date). `getDashboardSummary` returns single-row with total P&L, win/loss counts, today stats via CASE WHEN. `getTickerDistribution` groups by ticker_symbol with "Other" bucket for overflow. `getTradesForDate` fetches full trade objects for a specific date (DayDetail modal)
+
+- [x] T138 Create backend dashboard-stats endpoint in `backend/src/endpoints/dashboard-stats.ts` — `PayloadHandler` at `GET /api/dashboard/stats?accountId=X`. Uses `payload.find({ collection: 'trade-positions', where, limit: 10000, depth: 0 })`, aggregates server-side in one pass: dailyPnL, monthlyPnL, summary, tickerDistribution. Returns single JSON response. Register in `backend/src/payload.config.ts`
+
+- [x] T139 Implement PayloadAdapter aggregation methods in `frontend/src/lib/services/payload.ts` — private `fetchDashboardStats(accountId?)` calls `GET /dashboard/stats` with 5-second in-memory cache to deduplicate concurrent calls. `getDailyPnL`, `getMonthlyPnL`, `getDashboardSummary`, `getTickerDistribution` delegate to cached fetch. `getTradesForDate` uses existing getTrades with date filter
+
+- [x] T140 Update PnLChart component in `frontend/src/lib/components/charts/PnLChart.svelte` — change props from `trades: TradePosition[]` to `dailyData: DailyPnLRow[]`. Add D/W/M/Y time preset buttons (daily, weekly, monthly, yearly) with weekly as default. Aggregate dailyData client-side by selected preset. Build cumulative P&L series and win/loss bars from aggregated data
+
+- [x] T141 Update TickerPieChart component in `frontend/src/lib/components/charts/TickerPieChart.svelte` — change props from `trades: TradePosition[]` to `distributionData: TickerDistributionRow[]`. Use data directly instead of `buildTickerDistribution`. Fix dark mode legend font color: add `fontColor` to each `generateLabels` item (`#e4e4e7` dark / `#52525b` light)
+
+- [x] T142 Refactor dashboard page in `frontend/src/routes/dashboard/+page.svelte` — remove `allClosedTrades`, `loadClosedTrades()`, `aggregateDailyPnL`/`aggregateMonthlyPnL` imports. Add `loadDashboardData()` using `Promise.all` for all 4 aggregation calls. Derive `dailyPnL`/`monthlyPnL` Maps from row arrays via `$derived.by()`. Stat cards derive from `DashboardSummary` (O(1)). DayDetail modal fetches trades on-demand via `getTradesForDate`
+
+- [x] T143 Add SQLiteAdapter aggregation tests in `frontend/tests/unit/sqlite-adapter.test.ts` — 16 new tests covering: getDailyPnL (GROUP BY, account filter, empty), getMonthlyPnL (GROUP BY month, trading days), getDashboardSummary (single-row, empty shape, today params, account filter), getTickerDistribution (counts, "Other" bucket, account filter), getTradesForDate (date filter, account filter, full trade mapping)
+
+- [x] T144 Fix dark mode font color on Ticker/Pair input dropdown in `frontend/src/lib/components/trade/TickerSearch.svelte` — change `.dropdown` background to `var(--bg-surface)`, add `color: var(--text-primary)` to `.dropdown-item` and `.ticker-symbol`, change `.ticker-name` to `var(--text-muted)`, update hover to `var(--bg-hover)`. Add `color: var(--text-primary)` and `background: var(--bg-surface)` to `.input`
+
+**Checkpoint**: Dashboard loads ~15 KB instead of ~1.5 MB per load. P&L chart supports D/W/M/Y presets (weekly default). All dark mode font colors correct on charts and ticker input. 131 tests passing, 0 svelte-check errors.
+
+---
+
+## Phase 22: Commission Fees & Dashboard Bug Fix
+
+**Purpose**: Introduce optional commission fees on trades with a toggle, conditional fields (Commission and Gross P&L), auto-calculation of net P&L Amount, and conditional required validation. Fix Total Trades stat card showing paginated count instead of actual total.
+
+**Independent Test**: Open trade form → toggle "Commission fees" → Commission and Gross P&L fields appear → fill both fields → P&L Amount ($) auto-calculates as Gross P&L - Commission → fill only one field → validation requires the other → untoggle → fields hidden and values not submitted. Edit a trade that has commission data → toggle auto-opens with saved values. Dashboard → Total Trades card shows actual total count (not capped at 50). Export/import preserves commission and grossPnl fields.
+
+### Implementation for Commission Fees
+
+- [x] T145 Add `commission` and `grossPnl` fields to trade types in `frontend/src/lib/types/trade.ts` — add `commission: number | null` and `grossPnl: number | null` to `TradePosition`. Add `commission?: number` and `grossPnl?: number` to `CreateTradeData`. Add `commission?: number | null` and `grossPnl?: number | null` to `UpdateTradeData`
+
+- [x] T146 Add `commission` and `grossPnl` fields to backend collection in `backend/src/collections/TradePositions.ts` — add `commission` (type: number, min: 0) and `grossPnl` (type: number) fields after `pnlPercent`
+
+- [x] T147 Create Payload migration for commission columns — `backend/src/migrations/20260305_095639_add_commission_fields.ts` adds `commission` (numeric) and `gross_pnl` (numeric) columns to `trade_positions` table in PostgreSQL
+
+- [x] T148 Update SQLiteAdapter for commission fields in `frontend/src/lib/services/sqlite.ts` — add `migrateCommissionColumns()` method using `ALTER TABLE ADD COLUMN` (idempotent, catches "already exists" errors). Update `mapRowToTrade` to include `commission` and `grossPnl`. Update `createTrade` INSERT to include `commission` and `gross_pnl`. Update `updateTrade` fieldMap with `commission: 'commission'` and `grossPnl: 'gross_pnl'`
+
+- [x] T149 Update trades store for commission auto-calc in `frontend/src/lib/stores/trades.svelte.ts` — in both `createTrade` and `updateTrade`: when `commission` and `grossPnl` are both provided, compute `pnlAmount = grossPnl - commission` (overrides auto-calculated P&L)
+
+- [x] T150 Add commission toggle and fields to TradeForm in `frontend/src/lib/components/trade/TradeForm.svelte` — add `showCommission` toggle state (auto-opens when editing trade with existing commission data). Add Commission ($) and Gross P&L ($) input fields shown when toggled. Add `calcPnlFromCommission()` that computes `pnlAmount = grossPnl - commission` and auto-updates P&L %. Add conditional validation: if one of commission/grossPnl is filled, the other is required. Include `commission` and `grossPnl` in submitted data only when toggle is on
+
+- [x] T151 Update export/import for commission fields — add `commission: number | null` and `grossPnl: number | null` to `ExportTrade` in `frontend/src/lib/types/export.ts`. Update `exportJSON` and `importJSON` in `frontend/src/lib/utils/export.ts` to include commission/grossPnl. Update CSV export headers and row mapping to include `commission` and `gross_pnl` columns
+
+### Dashboard Bug Fix
+
+- [x] T152 Fix Total Trades stat card in `frontend/src/routes/dashboard/+page.svelte` — change Total Trades value from `tradesStore.trades.length` (paginated array capped at 50) to `tradesStore.totalDocs` (actual total count from query)
+
+**Checkpoint**: Commission toggle works on trade form. Auto-calculates net P&L from Gross P&L minus commission. Conditional validation prevents partial commission data. Export/import preserves commission fields. Total Trades card shows correct all-time count. 131 tests passing, 0 svelte-check errors.
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -326,10 +493,15 @@
 - **Networking & Deployment Fixes (Phase 15)**: Depends on Phase 1 (Docker) + Phase 2 (services)
 - **Dashboard Enhancements & Branding (Phase 16)**: Depends on Phase 12 (dashboard) + Phase 10 (starting capital)
 - **Account & Dashboard Bug Fixes (Phase 17)**: Depends on Phase 5 (US3 accounts) + Phase 6 (US4 calendar) + Phase 16 (dashboard)
+- **SQLiteAdapter & Android APK (Phase 18)**: Depends on Phase 2 (DataService interface, types) + Phase 9 (T061 mobile build pipeline)
+- **Mobile Polish & Build Improvements (Phase 19)**: Depends on Phase 18 (Android APK) + Phase 12 (dashboard) + Phase 8 (export/import)
+- **Electron Desktop Support (Phase 20)**: Depends on Phase 18 (SQLiteAdapter) + Phase 19 (mobile polish, shared platform patterns)
+- **Dashboard SQL Optimization & Chart Improvements (Phase 21)**: Depends on Phase 12 (dashboard restructuring) + Phase 16 (dashboard enhancements) + Phase 18 (SQLiteAdapter)
+- **Commission Fees & Dashboard Bug Fix (Phase 22)**: Depends on Phase 4 (US2 TradeForm, trades store) + Phase 18 (SQLiteAdapter) + Phase 8 (export/import) + Phase 21 (dashboard aggregation)
 
 ### Recommended Sequential Order
 
-Phase 1 → Phase 2 → Phase 3 (US1) → Phase 4 (US2) → Phase 5 (US3) → Phase 6 (US4) → Phase 7 (US5) → Phase 8 (Export/Import) → Phase 9 (Polish) → Phase 10 (Starting Capital & Auto P&L %) → Phase 11 (Rich Text Editor) → Phase 12 (Dashboard Restructuring) → Phase 13 (Dark Mode Fixes) → Phase 14 (R:R & TP Fixes) → Phase 15 (Networking Fixes) → Phase 16 (Branding) → Phase 17 (Account & Dashboard Bug Fixes)
+Phase 1 → Phase 2 → Phase 3 (US1) → Phase 4 (US2) → Phase 5 (US3) → Phase 6 (US4) → Phase 7 (US5) → Phase 8 (Export/Import) → Phase 9 (Polish) → Phase 10 (Starting Capital & Auto P&L %) → Phase 11 (Rich Text Editor) → Phase 12 (Dashboard Restructuring) → Phase 13 (Dark Mode Fixes) → Phase 14 (R:R & TP Fixes) → Phase 15 (Networking Fixes) → Phase 16 (Branding) → Phase 17 (Account & Dashboard Bug Fixes) → Phase 18 (SQLiteAdapter & Android APK) → Phase 19 (Mobile Polish & Build Improvements) → Phase 20 (Electron Desktop Support) → Phase 21 (Dashboard SQL Optimization & Chart Improvements) → Phase 22 (Commission Fees & Dashboard Bug Fix)
 
 ### Within Each User Story
 

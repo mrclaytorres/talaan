@@ -23,6 +23,37 @@ export interface PaginatedResult<T> {
 	hasPrevPage: boolean;
 }
 
+export interface DailyPnLRow {
+	date: string;        // 'YYYY-MM-DD'
+	amount: number;      // SUM(pnl_amount)
+	percent: number;     // SUM(pnl_percent)
+	tradeCount: number;
+	wins: number;
+	losses: number;
+}
+
+export interface MonthlyPnLRow {
+	month: string;       // 'YYYY-MM'
+	amount: number;
+	percent: number;
+	tradingDays: number;
+}
+
+export interface DashboardSummary {
+	totalPnl: number;
+	totalClosedTrades: number;
+	wins: number;
+	losses: number;
+	todayAmount: number;
+	todayPercent: number;
+	todayCount: number;
+}
+
+export interface TickerDistributionRow {
+	ticker: string;
+	count: number;
+}
+
 export interface DataService {
 	// User
 	getUser(): Promise<User | null>;
@@ -55,4 +86,11 @@ export interface DataService {
 	// Tickers
 	searchTickers(query: string): Promise<Ticker[]>;
 	getRecentTickers(limit: number): Promise<string[]>;
+
+	// Dashboard aggregations
+	getDailyPnL(accountId?: string): Promise<DailyPnLRow[]>;
+	getMonthlyPnL(accountId?: string): Promise<MonthlyPnLRow[]>;
+	getDashboardSummary(accountId?: string): Promise<DashboardSummary>;
+	getTickerDistribution(accountId?: string, limit?: number): Promise<TickerDistributionRow[]>;
+	getTradesForDate(date: string, accountId?: string): Promise<TradePosition[]>;
 }

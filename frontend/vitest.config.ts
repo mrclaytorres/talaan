@@ -8,7 +8,7 @@ export default defineConfig({
 		coverage: {
 			provider: 'v8',
 			include: ['src/lib/**/*.ts', 'src/lib/**/*.svelte'],
-			exclude: ['src/lib/types/**', 'src/lib/services/sqlite.ts'],
+			exclude: ['src/lib/types/**'],
 			thresholds: {
 				lines: 80,
 				functions: 80,
