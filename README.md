@@ -302,6 +302,7 @@ This runs `vite build` + `cap sync` + opens the Electron window with DevTools en
 ```bash
 cd frontend
 pnpm install
+pnpm build
 ```
 
 **Step 2.** Add the Electron platform (first time only):
@@ -322,6 +323,13 @@ cd ..
 
 ```bash
 pnpm run build:electron
+npx cap sync @capacitor-community/electron
+```
+
+**Important:** Fix the SQLite plugin registration (REQUIRED after every cap sync)
+
+```bash
+node scripts/fix-electron-plugins.js
 ```
 
 > **Important:** Always use `build:electron` instead of running `build` and `cap sync` separately. The `cap sync` command resets `electron-plugins.js` to a format that breaks SQLite plugin registration. The `build:electron` script automatically runs `scripts/fix-electron-plugins.js` after syncing to restore the correct plugin configuration.
