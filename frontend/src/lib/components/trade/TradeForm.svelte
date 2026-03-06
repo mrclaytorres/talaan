@@ -162,9 +162,6 @@
 			if (hasGrossPnl && !hasCommission) {
 				newErrors.commission = 'Required when Gross P&L is set';
 			}
-			if (hasCommission && Number(commission) < 0) {
-				newErrors.commission = 'Must be 0 or greater';
-			}
 		}
 
 		errors = newErrors;
@@ -190,8 +187,8 @@
 				status,
 				pnlAmount: pnlAmount !== '' ? Number(pnlAmount) : undefined,
 				pnlPercent: pnlPercent !== '' ? Number(pnlPercent) : undefined,
-				commission: showCommission && commission !== '' ? Number(commission) : undefined,
-				grossPnl: showCommission && grossPnl !== '' ? Number(grossPnl) : undefined,
+				commission: showCommission && commission !== '' ? Number(commission) : null,
+				grossPnl: showCommission && grossPnl !== '' ? Number(grossPnl) : null,
 				notes: isEmptyHtml(notes) ? undefined : notes,
 			});
 		} finally {
@@ -251,7 +248,7 @@
 
 	{#if showCommission}
 		<div class="form-grid">
-			<Input type="number" label="Commission ($)" bind:value={commission} step="any" error={errors.commission} placeholder="0.00" oninput={calcPnlFromCommission} min={0} />
+			<Input type="number" label="Commission ($)" bind:value={commission} step="any" error={errors.commission} placeholder="0.00" oninput={calcPnlFromCommission} />
 			<Input type="number" label="Gross P&L ($)" bind:value={grossPnl} step="any" error={errors.grossPnl} placeholder="P&L before fees" oninput={calcPnlFromCommission} />
 		</div>
 	{/if}

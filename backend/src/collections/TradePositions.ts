@@ -97,7 +97,6 @@ export const TradePositions: CollectionConfig = {
 		{
 			name: 'commission',
 			type: 'number',
-			min: 0,
 		},
 		{
 			name: 'grossPnl',
